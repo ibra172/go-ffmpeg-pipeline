@@ -1,0 +1,157 @@
+basePath: /
+definitions:
+  task.CreateTaskResponse:
+    properties:
+      task_id:
+        description: TaskID is the generated UUID of the created task.
+        type: string
+    type: object
+  task.ErrorResponse:
+    properties:
+      error:
+        description: Error holds a public error message.
+        type: string
+    type: object
+  task.TaskPayload:
+    properties:
+      operation:
+        description: 'Operation defines the type of job to run. Examples: transcode,
+          thumbnail, watermark.'
+        type: string
+      resolution:
+        description: Resolution is used by transcode tasks and matches dimension presets
+          such as 720p.
+        type: string
+      target_format:
+        description: TargetFormat is used by transcode tasks and may be set to mp4,
+          mov, etc.
+        type: string
+    type: object
+  task.TaskResult:
+    properties:
+      output_path:
+        description: OutputPath is the resulting artifact path.
+        type: string
+    type: object
+  task.TaskResultResponse:
+    properties:
+      result:
+        allOf:
+        - $ref: '#/definitions/task.TaskResult'
+        description: Result contains the processing output.
+    type: object
+  task.TaskStatusResponse:
+    properties:
+      status:
+        description: Status can be in_progress, ready, or error.
+        type: string
+    type: object
+host: 127.0.0.1:8000
+info:
+  contact: {}
+  description: API Server for a Multimedia Processor Application using FFmpeg
+  title: Media Pipeline App API
+  version: "1.0"
+paths:
+  /result/{id}:
+    get:
+      description: Returns the processing result for a task when it is finished. For
+        failed tasks, the API returns the error message instead of the output artifact.
+      parameters:
+      - description: Task ID in UUID format
+        example: 123e4567-e89b-12d3-a456-426614174000
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Task finished successfully
+          schema:
+            $ref: '#/definitions/task.TaskResultResponse'
+        "400":
+          description: Invalid UUID format
+          schema:
+            $ref: '#/definitions/task.ErrorResponse'
+        "404":
+          description: Task not found
+          schema:
+            $ref: '#/definitions/task.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/task.ErrorResponse'
+      summary: Get task result
+      tags:
+      - task
+  /status/{id}:
+    get:
+      description: Returns the current processing state of a task. The public status
+        values are in_progress, ready, and error.
+      parameters:
+      - description: Task ID in UUID format
+        example: 123e4567-e89b-12d3-a456-426614174000
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Current task status
+          schema:
+            $ref: '#/definitions/task.TaskStatusResponse'
+        "202":
+          description: Task is still processing
+          schema:
+            $ref: '#/definitions/task.TaskStatusResponse'
+        "400":
+          description: Invalid UUID format
+          schema:
+            $ref: '#/definitions/task.ErrorResponse'
+        "404":
+          description: Task not found
+          schema:
+            $ref: '#/definitions/task.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/task.ErrorResponse'
+      summary: Get task status
+      tags:
+      - task
+  /task:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new media-processing job. The task is queued immediately
+        and can be checked by its UUID through the status and result endpoints.
+      parameters:
+      - description: Task creation payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/task.TaskPayload'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Task created successfully
+          schema:
+            $ref: '#/definitions/task.CreateTaskResponse'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/task.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/task.ErrorResponse'
+      summary: Create processing task
+      tags:
+      - task
+swagger: "2.0"
