@@ -1,18 +1,40 @@
 basePath: /
 definitions:
-  task.CreateTaskResponse:
+  auth.LoginRequest:
     properties:
-      task_id:
-        description: TaskID is the generated UUID of the created task.
+      password:
+        type: string
+      username:
         type: string
     type: object
-  task.ErrorResponse:
+  auth.LoginResponse:
+    properties:
+      expires_at:
+        type: string
+      token:
+        type: string
+    type: object
+  auth.RegisterRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  auth.RegisterResponse:
+    properties:
+      user_id:
+        type: string
+      username:
+        type: string
+    type: object
+  httpresp.ErrorResponse:
     properties:
       error:
         description: Error holds a public error message.
         type: string
     type: object
-  task.TaskPayload:
+  task.CreateTaskRequest:
     properties:
       operation:
         description: 'Operation defines the type of job to run. Examples: transcode,
@@ -27,18 +49,23 @@ definitions:
           mov, etc.
         type: string
     type: object
-  task.TaskResult:
+  task.CreateTaskResponse:
     properties:
-      output_path:
-        description: OutputPath is the resulting artifact path.
+      task_id:
+        description: TaskID is the generated UUID of the created task.
+        type: string
+    type: object
+  task.TaskErrorResponse:
+    properties:
+      error:
+        type: string
+      status:
         type: string
     type: object
   task.TaskResultResponse:
     properties:
-      result:
-        allOf:
-        - $ref: '#/definitions/task.TaskResult'
-        description: Result contains the processing output.
+      output_path:
+        type: string
     type: object
   task.TaskStatusResponse:
     properties:
@@ -53,6 +80,75 @@ info:
   title: Media Pipeline App API
   version: "1.0"
 paths:
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates an existing user and returns a valid bearer token
+        for protected routes.
+      parameters:
+      - description: User login payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User logged in successfully
+          schema:
+            $ref: '#/definitions/auth.LoginResponse'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/httpresp.ErrorResponse'
+        "401":
+          description: Invalid username or password
+          schema:
+            $ref: '#/definitions/httpresp.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/httpresp.ErrorResponse'
+      summary: Login user
+      tags:
+      - auth
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user account and returns the created user ID.
+      parameters:
+      - description: User registration payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User registered successfully
+          schema:
+            $ref: '#/definitions/auth.RegisterResponse'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/httpresp.ErrorResponse'
+        "409":
+          description: Username already exists
+          schema:
+            $ref: '#/definitions/httpresp.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/httpresp.ErrorResponse'
+      summary: Register new user
+      tags:
+      - auth
   /result/{id}:
     get:
       description: Returns the processing result for a task when it is finished. For
@@ -71,18 +167,24 @@ paths:
           description: Task finished successfully
           schema:
             $ref: '#/definitions/task.TaskResultResponse'
+        "202":
+          description: Task is still being processed
+          schema:
+            $ref: '#/definitions/task.TaskStatusResponse'
         "400":
           description: Invalid UUID format
           schema:
-            $ref: '#/definitions/task.ErrorResponse'
+            $ref: '#/definitions/httpresp.ErrorResponse'
         "404":
           description: Task not found
           schema:
-            $ref: '#/definitions/task.ErrorResponse'
+            $ref: '#/definitions/httpresp.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/task.ErrorResponse'
+            $ref: '#/definitions/httpresp.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Get task result
       tags:
       - task
@@ -111,15 +213,17 @@ paths:
         "400":
           description: Invalid UUID format
           schema:
-            $ref: '#/definitions/task.ErrorResponse'
+            $ref: '#/definitions/httpresp.ErrorResponse'
         "404":
           description: Task not found
           schema:
-            $ref: '#/definitions/task.ErrorResponse'
+            $ref: '#/definitions/httpresp.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/task.ErrorResponse'
+            $ref: '#/definitions/httpresp.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Get task status
       tags:
       - task
@@ -135,7 +239,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/task.TaskPayload'
+          $ref: '#/definitions/task.CreateTaskRequest'
       produces:
       - application/json
       responses:
@@ -146,12 +250,19 @@ paths:
         "400":
           description: Invalid request body
           schema:
-            $ref: '#/definitions/task.ErrorResponse'
+            $ref: '#/definitions/httpresp.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/task.ErrorResponse'
+            $ref: '#/definitions/httpresp.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Create processing task
       tags:
       - task
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

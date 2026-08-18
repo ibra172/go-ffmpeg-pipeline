@@ -11,6 +11,7 @@ import (
 type Config struct {
 	Port            string        `envconfig:"PORT" default:":8000"`
 	ShutdownTimeout time.Duration `envconfig:"SHUTDOWN_TIMEOUT" default:"10s"`
+	SwaggerDir      string        `envconfig:"SWAGGER_DIR" default:"./docs"`
 }
 
 func New() (Config, error) {

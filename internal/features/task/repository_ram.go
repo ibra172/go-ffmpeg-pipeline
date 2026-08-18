@@ -35,7 +35,7 @@ func (r *RamRepository) GetTaskByID(ctx context.Context, id uuid.UUID) (Task, er
 
 	task, ok := r.data[id]
 	if !ok {
-		return Task{}, fmt.Errorf("task with ID=`%s`: %w", id, apperr.ErrNotFound)
+		return Task{}, fmt.Errorf("task with ID=`%v`: %w", id, apperr.ErrNotFound)
 	}
 
 	return *task, nil
@@ -46,7 +46,7 @@ func (r *RamRepository) UpdateTask(ctx context.Context, task *Task) error {
 	defer r.mu.Unlock()
 
 	if _, exists := r.data[task.ID]; !exists {
-		return fmt.Errorf("task with ID=`%s`: %w", task.ID, apperr.ErrNotFound)
+		return fmt.Errorf("task with ID=`%v`: %w", task.ID, apperr.ErrNotFound)
 	}
 
 	r.data[task.ID] = task

@@ -11,6 +11,7 @@ import (
 
 	"github.com/ibra172/go-ffmpeg-pipeline/docs"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/config"
+	"github.com/ibra172/go-ffmpeg-pipeline/internal/features/auth"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/features/task"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/middleware"
 
@@ -23,6 +24,9 @@ import (
 
 // @host         127.0.0.1:8000
 // @BasePath     /
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 
 func main() {
 	cfg := config.MustNew()
@@ -35,13 +39,23 @@ func main() {
 	taskService := task.NewService(taskRepository)
 	taskHandler := task.NewHandler(taskService)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /task", taskHandler.CreateTask)
-	mux.HandleFunc("GET /status/{id}", taskHandler.GetStatus)
-	mux.HandleFunc("GET /result/{id}", taskHandler.GetResult)
+	userRepository := auth.NewUserRamRepository()
+	sessionRepository := auth.NewSessionRamRepo()
+	authService := auth.NewService(userRepository, sessionRepository)
+	authHandler := auth.NewHandler(authService)
 
-	// Swagger UI stays at /swagger/ and loads the generated spec from /swagger.json
-	mux.Handle("/swagger.json", http.FileServer(http.Dir("./docs")))
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("POST /register", authHandler.Register)
+	mux.HandleFunc("POST /login", authHandler.Login)
+
+	authMiddleware := auth.RequireAuth(authService)
+
+	mux.Handle("POST /task", authMiddleware(http.HandlerFunc(taskHandler.CreateTask)))
+	mux.Handle("GET /status/{id}", authMiddleware(http.HandlerFunc(taskHandler.GetStatus)))
+	mux.Handle("GET /result/{id}", authMiddleware(http.HandlerFunc(taskHandler.GetResult)))
+
+	mux.Handle("/swagger.json", http.FileServer(http.Dir(cfg.SwaggerDir)))
 	mux.Handle("/swagger/", httpSwagger.Handler(httpSwagger.URL("/swagger.json")))
 
 	var handler http.Handler = mux

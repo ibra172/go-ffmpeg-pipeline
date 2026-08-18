@@ -10,6 +10,13 @@ import (
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/ctxlog"
 )
 
+// ErrorResponse describes an API error payload.
+// swagger:model ErrorResponse
+type ErrorResponse struct {
+	// Error holds a public error message.
+	Error string `json:"error"`
+}
+
 func RespondJSON(w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -26,7 +33,7 @@ func RespondError(ctx context.Context, w http.ResponseWriter, err error, publicM
 		logger.Warn(publicMsg, "error", err, "status", status)
 	}
 
-	RespondJSON(w, status, map[string]string{"error": publicMsg})
+	RespondJSON(w, status, ErrorResponse{Error: publicMsg})
 }
 
 func statusFromError(err error) int {

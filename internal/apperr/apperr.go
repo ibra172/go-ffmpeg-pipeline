@@ -12,5 +12,6 @@ var (
 	// ErrConflict — конфликт при обновлении (HTTP 409)
 	ErrConflict = errors.New("conflict")
 
+	// ErrUnauthorized — пользователь не авторизован (HTTP 401).
 	ErrUnauthorized = errors.New("unauthorized")
 )
