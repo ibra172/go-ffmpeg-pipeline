@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,6 +15,7 @@ import (
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/features/auth"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/features/task"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/middleware"
+	"google.golang.org/grpc"
 
 	httpSwagger "github.com/swaggo/http-swagger"
 )
@@ -67,6 +69,15 @@ func main() {
 		Addr:    cfg.Port,
 		Handler: handler,
 	}
+
+	listener, err := net.Listen("tcp", ":8081")
+	if err != nil {
+		logger.Error("can't listen port", "error", err)
+	}
+	defer listener.Close()
+	
+	grpcServer := grpc.NewServer()
+	grpcServer.Serve(listener)
 
 	ctx, stop := signal.NotifyContext(
 		context.Background(),
