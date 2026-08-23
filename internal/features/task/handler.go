@@ -47,17 +47,12 @@ type TaskStatusResponse struct {
 	Status string `json:"status"`
 }
 
-// TaskErrorResponse is returned when a task fails and the API still responds with HTTP 200.
-// swagger:model TaskErrorResponse
-type TaskErrorResponse struct {
-	Status string `json:"status"`
-	Error  string `json:"error"`
-}
-
 // TaskResultResponse is returned by the result endpoint.
 // swagger:model TaskResultResponse
 type TaskResultResponse struct {
-	OutputPath string `json:"output_path"`
+	Status     string `json:"status"`
+	OutputPath string `json:"output_path,omitempty"`
+	Error      string `json:"error,omitempty"`
 }
 
 // CreateTask creates a new media-processing task.
@@ -135,9 +130,15 @@ func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpresp.RespondJSON(w, http.StatusAccepted, TaskStatusResponse{
-		Status: externalStatus(task.Status),
-	})
+	switch task.Status {
+	case StatusInProgress:
+		httpresp.RespondJSON(w, http.StatusAccepted, TaskStatusResponse{Status: "in_progress"})
+	case StatusReady:
+		httpresp.RespondJSON(w, http.StatusOK, TaskStatusResponse{Status: "ready"})
+	case StatusError:
+		httpresp.RespondJSON(w, http.StatusOK, TaskStatusResponse{Status: "error"})
+	}
+
 }
 
 // GetResult returns the result payload for a completed task.
@@ -147,8 +148,7 @@ func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param id path string true "Task ID in UUID format" example(123e4567-e89b-12d3-a456-426614174000)
 // @Security BearerAuth
-// @Success 200 {object} TaskErrorResponse "Task finished with an error"
-// @Success 200 {object} TaskResultResponse "Task finished successfully"
+// @Success 200 {object} TaskResultResponse "Task finished (see status field for success/error)"
 // @Success 202 {object} TaskStatusResponse "Task is still being processed"
 // @Failure 400 {object} httpresp.ErrorResponse "Invalid UUID format"
 // @Failure 404 {object} httpresp.ErrorResponse "Task not found"
@@ -175,28 +175,18 @@ func (h *Handler) GetResult(w http.ResponseWriter, r *http.Request) {
 
 	switch task.Status {
 	case StatusError:
-		httpresp.RespondJSON(w, http.StatusOK, TaskErrorResponse{
+		httpresp.RespondJSON(w, http.StatusOK, TaskResultResponse{
 			Status: "error",
 			Error:  task.ErrorMsg,
 		})
 	case StatusReady:
 		httpresp.RespondJSON(w, http.StatusOK, TaskResultResponse{
+			Status:     "ready",
 			OutputPath: task.Result.OutputPath,
 		})
 	default: // StatusInProgress
 		httpresp.RespondJSON(w, http.StatusAccepted, TaskStatusResponse{
 			Status: "in_progress",
 		})
-	}
-}
-
-func externalStatus(s TaskStatus) string {
-	switch s {
-	case StatusReady:
-		return "ready"
-	case StatusError:
-		return "error"
-	default:
-		return "in_progress"
 	}
 }
