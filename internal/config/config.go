@@ -12,6 +12,8 @@ type Config struct {
 	Port            string        `envconfig:"PORT" default:":8000"`
 	ShutdownTimeout time.Duration `envconfig:"SHUTDOWN_TIMEOUT" default:"10s"`
 	SwaggerDir      string        `envconfig:"SWAGGER_DIR" default:"./docs"`
+	AMQPURL         string        `envconfig:"AMQP_URL" default:"amqp://guest:guest@localhost:5672/"`
+	TaskQueueName   string        `envconfig:"TASK_QUEUE_NAME" default:"tasks"`
 }
 
 func New() (Config, error) {

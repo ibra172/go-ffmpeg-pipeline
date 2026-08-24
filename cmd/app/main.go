@@ -15,6 +15,7 @@ import (
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/features/auth"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/features/task"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/middleware"
+	"github.com/ibra172/go-ffmpeg-pipeline/internal/queue/rabbitmq"
 	"google.golang.org/grpc"
 
 	httpSwagger "github.com/swaggo/http-swagger"
@@ -37,8 +38,22 @@ func main() {
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
+	rabbitmqClient, err := rabbitmq.NewClient(cfg.AMQPURL)
+	if err != nil {
+		logger.Error("failed to create rabbitMQ client", "error", err)
+		os.Exit(1)
+	}
+	defer rabbitmqClient.Close()
+
+	taskSender, err := rabbitmq.NewSender(rabbitmqClient, cfg.TaskQueueName)
+	if err != nil {
+		logger.Error("failed to create rabbitMQ sender", "error", err)
+		os.Exit(1)
+	}
+
 	taskRepository := task.NewRamRepository()
-	taskService := task.NewService(taskRepository)
+
+	taskService := task.NewService(taskRepository, taskSender)
 	taskHandler := task.NewHandler(taskService)
 
 	userRepository := auth.NewUserRamRepository()
@@ -75,7 +90,7 @@ func main() {
 		logger.Error("can't listen port", "error", err)
 	}
 	defer listener.Close()
-	
+
 	grpcServer := grpc.NewServer()
 	grpcServer.Serve(listener)
 
@@ -107,8 +122,8 @@ func main() {
 			server.Close()
 		}
 
-		if err := taskService.Shutdown(shutdownCtx); err != nil {
-			logger.Warn("some background tasks did not finish before shutdown", "error", err)
-		}
+		// if err := taskService.Shutdown(shutdownCtx); err != nil {
+		// 	logger.Warn("some background tasks did not finish before shutdown", "error", err)
+		// }
 	}
 }

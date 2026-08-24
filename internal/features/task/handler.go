@@ -13,12 +13,12 @@ import (
 )
 
 type Handler struct {
-	Service TaskService
+	service TaskService
 }
 
 func NewHandler(service TaskService) *Handler {
 	return &Handler{
-		Service: service,
+		service: service,
 	}
 }
 
@@ -87,7 +87,7 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		Resolution:   req.Resolution,
 	}
 
-	task, err := h.Service.CreateTask(ctx, payload)
+	task, err := h.service.CreateTask(ctx, payload)
 	if err != nil {
 		httpresp.RespondError(ctx, w, err, "failed to create task")
 		return
@@ -124,7 +124,7 @@ func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := h.Service.GetTaskByID(r.Context(), id)
+	task, err := h.service.GetTaskByID(r.Context(), id)
 	if err != nil {
 		httpresp.RespondError(ctx, w, err, "failed to get task")
 		return
@@ -167,7 +167,7 @@ func (h *Handler) GetResult(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := h.Service.GetTaskByID(r.Context(), id)
+	task, err := h.service.GetTaskByID(r.Context(), id)
 	if err != nil {
 		httpresp.RespondError(ctx, w, err, "failed to get task")
 		return
