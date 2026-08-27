@@ -3,17 +3,20 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/ibra172/go-ffmpeg-pipeline/docs"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/config"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/features/auth"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/features/task"
+	"github.com/ibra172/go-ffmpeg-pipeline/internal/grpc/taskpb"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/middleware"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/queue/rabbitmq"
 	"google.golang.org/grpc"
@@ -32,28 +35,33 @@ import (
 // @name Authorization
 
 func main() {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
+	if err := run(logger); err != nil {
+		logger.Error("fatal error", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run(logger *slog.Logger) error {
 	cfg := config.MustNew()
 	// set swagger host dynamically from config
 	docs.SwaggerInfo.Host = "127.0.0.1" + cfg.Port
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-
 	rabbitmqClient, err := rabbitmq.NewClient(cfg.AMQPURL)
 	if err != nil {
-		logger.Error("failed to create rabbitMQ client", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to create rabbitMQ client: %w", err)
 	}
 	defer rabbitmqClient.Close()
 
 	taskSender, err := rabbitmq.NewSender(rabbitmqClient, cfg.TaskQueueName)
 	if err != nil {
-		logger.Error("failed to create rabbitMQ sender", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to create rabbitMQ sender: %w", err)
 	}
 
 	taskRepository := task.NewRamRepository()
 
-	taskService := task.NewService(taskRepository, taskSender)
+	taskService := task.NewService(taskRepository, taskSender, cfg.DataDir)
 	taskHandler := task.NewHandler(taskService)
 
 	userRepository := auth.NewUserRamRepository()
@@ -85,14 +93,13 @@ func main() {
 		Handler: handler,
 	}
 
-	listener, err := net.Listen("tcp", ":8081")
+	grpcListener, err := net.Listen("tcp", cfg.GRPCPort)
 	if err != nil {
-		logger.Error("can't listen port", "error", err)
+		return fmt.Errorf("failed to listen on gRPC port %s: %w", cfg.GRPCPort, err)
 	}
-	defer listener.Close()
 
 	grpcServer := grpc.NewServer()
-	grpcServer.Serve(listener)
+	taskpb.RegisterTaskServiceServer(grpcServer, task.NewGRPCHandler(taskService))
 
 	ctx, stop := signal.NotifyContext(
 		context.Background(),
@@ -109,21 +116,55 @@ func main() {
 		}
 	}()
 
+	grpcErrCh := make(chan error, 1)
+	go func() {
+		logger.Info("starting gRPC server", "addr", cfg.GRPCPort)
+		if err := grpcServer.Serve(grpcListener); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			grpcErrCh <- err
+		}
+	}()
+
 	select {
 	case err := <-errCh:
-		logger.Error("server failed", "error", err)
+		return fmt.Errorf("the HTTP server has failed: %w", err)
+	case err := <-grpcErrCh:
+		return fmt.Errorf("the gRPC server has failed: %w", err)
 	case <-ctx.Done():
 		logger.Info("shutting down...")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 		defer cancel()
 
-		if err := server.Shutdown(shutdownCtx); err != nil {
-			logger.Error("graceful shutdown failed", "error", err)
-			server.Close()
-		}
+		var wg sync.WaitGroup
+		wg.Add(2)
 
-		// if err := taskService.Shutdown(shutdownCtx); err != nil {
-		// 	logger.Warn("some background tasks did not finish before shutdown", "error", err)
-		// }
+		go func() {
+			defer wg.Done()
+			if err := server.Shutdown(shutdownCtx); err != nil {
+				logger.Error("graceful shutdown of HTTP server failed", "error", err)
+				server.Close()
+			}
+		}()
+
+		go func() {
+			defer wg.Done()
+			done := make(chan struct{})
+			go func() {
+				grpcServer.GracefulStop()
+				close(done)
+			}()
+
+			select {
+			case <-done:
+				logger.Info("gRPC server stopped gracefully")
+			case <-shutdownCtx.Done():
+				logger.Error("graceful shutdown of gRPC server failed")
+				grpcServer.Stop()
+			}
+		}()
+
+		wg.Wait()
+		logger.Info("shutdown complete")
 	}
+
+	return nil
 }

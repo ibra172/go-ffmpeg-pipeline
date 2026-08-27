@@ -36,7 +36,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/auth.LoginRequest"
+                            "$ref": "#/definitions/internal_features_auth.LoginRequest"
                         }
                     }
                 ],
@@ -44,25 +44,25 @@ const docTemplate = `{
                     "200": {
                         "description": "User logged in successfully",
                         "schema": {
-                            "$ref": "#/definitions/auth.LoginResponse"
+                            "$ref": "#/definitions/internal_features_auth.LoginResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid request body",
                         "schema": {
-                            "$ref": "#/definitions/httpresp.ErrorResponse"
+                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Invalid username or password",
                         "schema": {
-                            "$ref": "#/definitions/httpresp.ErrorResponse"
+                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/httpresp.ErrorResponse"
+                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
                         }
                     }
                 }
@@ -88,7 +88,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/auth.RegisterRequest"
+                            "$ref": "#/definitions/internal_features_auth.RegisterRequest"
                         }
                     }
                 ],
@@ -96,25 +96,25 @@ const docTemplate = `{
                     "201": {
                         "description": "User registered successfully",
                         "schema": {
-                            "$ref": "#/definitions/auth.RegisterResponse"
+                            "$ref": "#/definitions/internal_features_auth.RegisterResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid request body",
                         "schema": {
-                            "$ref": "#/definitions/httpresp.ErrorResponse"
+                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Username already exists",
                         "schema": {
-                            "$ref": "#/definitions/httpresp.ErrorResponse"
+                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/httpresp.ErrorResponse"
+                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
                         }
                     }
                 }
@@ -147,33 +147,33 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Task finished successfully",
+                        "description": "Task finished (see status field for success/error)",
                         "schema": {
-                            "$ref": "#/definitions/task.TaskResultResponse"
+                            "$ref": "#/definitions/internal_features_task.TaskResultResponse"
                         }
                     },
                     "202": {
                         "description": "Task is still being processed",
                         "schema": {
-                            "$ref": "#/definitions/task.TaskStatusResponse"
+                            "$ref": "#/definitions/internal_features_task.TaskStatusResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid UUID format",
                         "schema": {
-                            "$ref": "#/definitions/httpresp.ErrorResponse"
+                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Task not found",
                         "schema": {
-                            "$ref": "#/definitions/httpresp.ErrorResponse"
+                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/httpresp.ErrorResponse"
+                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
                         }
                     }
                 }
@@ -208,31 +208,31 @@ const docTemplate = `{
                     "200": {
                         "description": "Current task status",
                         "schema": {
-                            "$ref": "#/definitions/task.TaskStatusResponse"
+                            "$ref": "#/definitions/internal_features_task.TaskStatusResponse"
                         }
                     },
                     "202": {
                         "description": "Task is still processing",
                         "schema": {
-                            "$ref": "#/definitions/task.TaskStatusResponse"
+                            "$ref": "#/definitions/internal_features_task.TaskStatusResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid UUID format",
                         "schema": {
-                            "$ref": "#/definitions/httpresp.ErrorResponse"
+                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Task not found",
                         "schema": {
-                            "$ref": "#/definitions/httpresp.ErrorResponse"
+                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/httpresp.ErrorResponse"
+                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
                         }
                     }
                 }
@@ -263,7 +263,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/task.CreateTaskRequest"
+                            "$ref": "#/definitions/internal_features_task.CreateTaskRequest"
                         }
                     }
                 ],
@@ -271,19 +271,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Task created successfully",
                         "schema": {
-                            "$ref": "#/definitions/task.CreateTaskResponse"
+                            "$ref": "#/definitions/internal_features_task.CreateTaskResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid request body",
                         "schema": {
-                            "$ref": "#/definitions/httpresp.ErrorResponse"
+                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/httpresp.ErrorResponse"
+                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
                         }
                     }
                 }
@@ -291,7 +291,16 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "auth.LoginRequest": {
+        "github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "description": "Error holds a public error message.",
+                    "type": "string"
+                }
+            }
+        },
+        "internal_features_auth.LoginRequest": {
             "type": "object",
             "properties": {
                 "password": {
@@ -302,7 +311,7 @@ const docTemplate = `{
                 }
             }
         },
-        "auth.LoginResponse": {
+        "internal_features_auth.LoginResponse": {
             "type": "object",
             "properties": {
                 "expires_at": {
@@ -313,7 +322,7 @@ const docTemplate = `{
                 }
             }
         },
-        "auth.RegisterRequest": {
+        "internal_features_auth.RegisterRequest": {
             "type": "object",
             "properties": {
                 "password": {
@@ -324,7 +333,7 @@ const docTemplate = `{
                 }
             }
         },
-        "auth.RegisterResponse": {
+        "internal_features_auth.RegisterResponse": {
             "type": "object",
             "properties": {
                 "user_id": {
@@ -335,16 +344,7 @@ const docTemplate = `{
                 }
             }
         },
-        "httpresp.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "error": {
-                    "description": "Error holds a public error message.",
-                    "type": "string"
-                }
-            }
-        },
-        "task.CreateTaskRequest": {
+        "internal_features_task.CreateTaskRequest": {
             "type": "object",
             "properties": {
                 "operation": {
@@ -361,7 +361,7 @@ const docTemplate = `{
                 }
             }
         },
-        "task.CreateTaskResponse": {
+        "internal_features_task.CreateTaskResponse": {
             "type": "object",
             "properties": {
                 "task_id": {
@@ -370,10 +370,13 @@ const docTemplate = `{
                 }
             }
         },
-        "task.TaskErrorResponse": {
+        "internal_features_task.TaskResultResponse": {
             "type": "object",
             "properties": {
                 "error": {
+                    "type": "string"
+                },
+                "output_path": {
                     "type": "string"
                 },
                 "status": {
@@ -381,15 +384,7 @@ const docTemplate = `{
                 }
             }
         },
-        "task.TaskResultResponse": {
-            "type": "object",
-            "properties": {
-                "output_path": {
-                    "type": "string"
-                }
-            }
-        },
-        "task.TaskStatusResponse": {
+        "internal_features_task.TaskStatusResponse": {
             "type": "object",
             "properties": {
                 "status": {

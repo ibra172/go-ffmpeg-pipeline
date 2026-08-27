@@ -1,0 +1,39 @@
+services:
+  app:
+    build:
+      context: ${PROJECT_ROOT}
+      dockerfile: ${PROJECT_ROOT}/cmd/app/Dockerfile
+    container_name: media-pipeline
+    ports:
+      - "8000:8000"
+    env_file:
+      - ${PROJECT_ROOT}/.env
+    volumes:
+      - ${PROJECT_ROOT}/data:/data
+    depends_on:
+      queue:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ${PROJECT_ROOT}
+    container_name: processor
+    env_file:
+      - ${PROJECT_ROOT}/.env
+    volumes:
+      - ${PROJECT_ROOT}/data:/data
+    depends_on:
+      queue:
+        condition: service_healthy
+  
+  queue:
+    image: "rabbitmq:4.3-management-alpine"
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 30s
+      retries: 3

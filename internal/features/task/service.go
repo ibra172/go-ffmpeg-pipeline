@@ -3,32 +3,35 @@ package task
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 type TaskService interface {
-	CreateTask(ctx context.Context, payload TaskPayload) (*Task, error)
+	CreateTask(ctx context.Context, payload Payload) (*Task, error)
 	GetTaskByID(ctx context.Context, id uuid.UUID) (Task, error)
-	UpdateStatus(ctx context.Context, id uuid.UUID, status TaskStatus) error
-	CompleteTask(ctx context.Context, id uuid.UUID, result TaskResult) error
+	UpdateStatus(ctx context.Context, id uuid.UUID, status Status) error
+	CompleteTask(ctx context.Context, id uuid.UUID, result Result) error
 	FailTask(ctx context.Context, id uuid.UUID, errMsg string) error
 }
 
 type Service struct {
 	repository TaskRepository
 	sender     Sender
+	dataDir    string
 }
 
-func NewService(taskRepository TaskRepository, sender Sender) *Service {
+func NewService(taskRepository TaskRepository, sender Sender, dataDir string) *Service {
 	return &Service{
 		repository: taskRepository,
 		sender:     sender,
+		dataDir:    dataDir,
 	}
 }
 
-func (s *Service) CreateTask(ctx context.Context, payload TaskPayload) (*Task, error) {
+func (s *Service) CreateTask(ctx context.Context, payload Payload) (*Task, error) {
 	task := &Task{
 		ID:        uuid.New(),
 		Status:    StatusInProgress,
@@ -46,7 +49,7 @@ func (s *Service) CreateTask(ctx context.Context, payload TaskPayload) (*Task, e
 		Operation:    task.Payload.Operation,
 		TargetFormat: task.Payload.TargetFormat,
 		Resolution:   task.Payload.Resolution,
-		InputPath:    fmt.Sprintf("/data/uploads/{%s}.mp4", task.ID),
+		InputPath:    filepath.Join(s.dataDir, "uploads", task.ID.String()+".mp4"),
 	}
 
 	if err := s.sender.Send(ctx, msg); err != nil {
@@ -66,13 +69,13 @@ func (s *Service) GetTaskByID(ctx context.Context, id uuid.UUID) (Task, error) {
 	return task, nil
 }
 
-func (s *Service) UpdateStatus(ctx context.Context, id uuid.UUID, status TaskStatus) error {
+func (s *Service) UpdateStatus(ctx context.Context, id uuid.UUID, status Status) error {
 	return s.mutateTask(ctx, id, func(t *Task) {
 		t.Status = status
 	})
 }
 
-func (s *Service) CompleteTask(ctx context.Context, id uuid.UUID, result TaskResult) error {
+func (s *Service) CompleteTask(ctx context.Context, id uuid.UUID, result Result) error {
 	return s.mutateTask(ctx, id, func(t *Task) {
 		t.Status = StatusReady
 		t.Result = &result

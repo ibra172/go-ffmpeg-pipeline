@@ -5,8 +5,6 @@ PYTHON = $(VENV)/bin/python3
 PIP = $(VENV)/bin/pip
 PYTEST = $(VENV)/bin/pytest
 
-.PHONY: test
-
 test-env-up:
 	python3 -m venv $(VENV)
 #   $(PIP) install pytest requests
@@ -34,3 +32,15 @@ docker-start:
 
 docker-rm:
 	docker rm $(CONTAINER_NAME)
+
+service-deploy:
+	docker compose up -d --build
+
+service-undeploy:
+	docker compose down
+
+proto:
+	protoc \
+  	--go_out=. --go_opt=paths=source_relative \
+  	--go-grpc_out=. --go-grpc_opt=paths=source_relative \
+  	internal/grpc/taskpb/task.proto

@@ -81,7 +81,7 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	payload := TaskPayload{
+	payload := Payload{
 		Operation:    req.Operation,
 		TargetFormat: req.TargetFormat,
 		Resolution:   req.Resolution,
