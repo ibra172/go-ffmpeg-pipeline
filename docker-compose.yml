@@ -17,7 +17,8 @@ services:
   worker:
     build:
       context: ${PROJECT_ROOT}
-    container_name: processor
+      dockerfile: ${PROJECT_ROOT}/cmd/worker/Dockerfile
+    container_name: proccessor
     env_file:
       - ${PROJECT_ROOT}/.env
     volumes:

@@ -19,6 +19,7 @@ type Config struct {
 	DataDir string `envconfig:"DATA_DIR" default:"/data"`
 
 	GRPCPort string `envconfig:"GRPC_PORT" default:":9090"`
+	GRPCTarget string `envconfig:"GRPC_TARGET" default:"localhost:9090"`
 }
 
 func New() (Config, error) {

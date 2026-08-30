@@ -10,9 +10,12 @@ import (
 	"syscall"
 
 	"github.com/google/uuid"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/config"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/features/task"
+	grpc_client "github.com/ibra172/go-ffmpeg-pipeline/internal/grpc/client"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/queue/rabbitmq"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/worker"
 )
@@ -29,13 +32,26 @@ func main() {
 func run(logger *slog.Logger) error {
 	cfg := config.MustNew()
 
-	client, err := rabbitmq.NewClient(cfg.AMQPURL)
+	rabbitClient, err := rabbitmq.NewClient(cfg.AMQPURL)
 	if err != nil {
 		return fmt.Errorf("failed to create rabbitMQ client: %w", err)
 	}
-	defer client.Close()
+	defer rabbitClient.Close()
 
-	consumer, err := rabbitmq.NewConsumer(client, cfg.TaskQueueName)
+	grpcClient, err := grpc.NewClient(
+		cfg.GRPCTarget,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create gRPC client: %w", err)
+	}
+	defer grpcClient.Close()
+
+	resultCommitter := grpc_client.NewResultCommiter(grpcClient)
+
+	processor := worker.NewProcessor(logger, cfg.DataDir, resultCommitter)
+
+	consumer, err := rabbitmq.NewConsumer(rabbitClient, cfg.TaskQueueName)
 	if err != nil {
 		return fmt.Errorf("failed to create rabbitMQ consumer: %w", err)
 	}
@@ -45,8 +61,6 @@ func run(logger *slog.Logger) error {
 	if err != nil {
 		return fmt.Errorf("failed to start consuming: %w", err)
 	}
-
-	processor := worker.NewProcessor(logger, cfg.DataDir)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

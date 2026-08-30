@@ -43,7 +43,7 @@ func (c *Consumer) Consume(consumerTag string) (<-chan amqp.Delivery, error) {
 	deliveries, err := c.client.channel.Consume(
 		c.queueName,
 		consumerTag,    // consumer tag
-		false, // autoAck — false
+		false, // autoAck
 		false, // exclusive
 		false, // noLocal
 		false, // noWait
