@@ -62,7 +62,7 @@ func run(logger *slog.Logger) error {
 	taskRepository := task.NewRamRepository()
 
 	taskService := task.NewService(taskRepository, taskSender, cfg.DataDir)
-	taskHandler := task.NewHandler(taskService)
+	taskHandler := task.NewHandler(taskService, cfg.DataDir, cfg.MaxUploadSizeMB)
 
 	userRepository := auth.NewUserRamRepository()
 	sessionRepository := auth.NewSessionRamRepo()

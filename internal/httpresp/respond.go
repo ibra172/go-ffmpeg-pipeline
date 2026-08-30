@@ -46,6 +46,7 @@ func statusFromError(err error) int {
 		return http.StatusConflict
 	case errors.Is(err, apperr.ErrUnauthorized):
 		return http.StatusUnauthorized
+	
 	default:
 		return http.StatusInternalServerError
 	}

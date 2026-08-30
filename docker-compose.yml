@@ -23,6 +23,7 @@ services:
       - ${PROJECT_ROOT}/.env
     volumes:
       - ${PROJECT_ROOT}/data:/data
+      - ${PROJECT_ROOT}/resources:/resources
     depends_on:
       queue:
         condition: service_healthy

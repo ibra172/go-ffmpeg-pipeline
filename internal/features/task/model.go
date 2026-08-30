@@ -18,6 +18,7 @@ type Payload struct {
 	Operation    string
 	TargetFormat string
 	Resolution   string
+	InputPath    string
 }
 
 type Result struct {

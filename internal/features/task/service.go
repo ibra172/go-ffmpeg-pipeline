@@ -3,7 +3,6 @@ package task
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
@@ -49,7 +48,7 @@ func (s *Service) CreateTask(ctx context.Context, payload Payload) (*Task, error
 		Operation:    task.Payload.Operation,
 		TargetFormat: task.Payload.TargetFormat,
 		Resolution:   task.Payload.Resolution,
-		InputPath:    filepath.Join(s.dataDir, "uploads", task.ID.String()+".mp4"),
+		InputPath:    task.Payload.InputPath,
 	}
 
 	if err := s.sender.Send(ctx, msg); err != nil {
