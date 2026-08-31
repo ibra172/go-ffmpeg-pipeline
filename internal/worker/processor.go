@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -12,9 +11,10 @@ import (
 )
 
 type Processor struct {
-	logger   *slog.Logger
-	dataDir  string
-	committer ResultCommitter
+	logger        *slog.Logger
+	dataDir       string
+	committer     ResultCommitter
+	watermarkPath string
 }
 
 type ResultCommitter interface {
@@ -22,11 +22,12 @@ type ResultCommitter interface {
 	CommitFailure(ctx context.Context, taskID uuid.UUID, errMsg string) error
 }
 
-func NewProcessor(logger *slog.Logger, dataDir string, commiter ResultCommitter) *Processor {
+func NewProcessor(logger *slog.Logger, dataDir string, watermarkPath string, committer ResultCommitter) *Processor {
 	return &Processor{
-		logger:   logger,
-		dataDir:  dataDir,
-		committer: commiter,
+		logger:        logger,
+		dataDir:       dataDir,
+		watermarkPath: watermarkPath,
+		committer:     committer,
 	}
 }
 
@@ -37,9 +38,24 @@ func (p *Processor) Process(ctx context.Context, msg task.Message) error {
 		"input_path", msg.InputPath,
 	)
 
-	time.Sleep(time.Second * 2) // TODO: реальный ffmpeg
+	outputPath, args, err := buildFFmpegCommand(msg, p.dataDir, p.watermarkPath)
+	if err != nil {
+		if commitErr := p.committer.CommitFailure(ctx, msg.TaskID, err.Error()); commitErr != nil {
+			return fmt.Errorf("build ffmpeg command: %w; commit failure also failed: %w", err, commitErr)
+		}
 
-	outputPath := "fake output path"
+		p.logger.Error("task failed during building ffmpeg command", "task_id", msg.TaskID, "error", err)
+		return nil
+	}
+
+	if err := runFFmpeg(ctx, args); err != nil {
+		if commitErr := p.committer.CommitFailure(ctx, msg.TaskID, err.Error()); commitErr != nil {
+			return fmt.Errorf("run ffmpeg: %w; commit failure also failed: %w", err, commitErr)
+		}
+
+		p.logger.Error("task failed during ffmpeg processing", "task_id", msg.TaskID, "error", err)
+		return nil
+	}
 
 	result := task.Result{OutputPath: outputPath}
 	if err := p.committer.CommitSuccess(ctx, msg.TaskID, result); err != nil {

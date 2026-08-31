@@ -49,7 +49,7 @@ func run(logger *slog.Logger) error {
 
 	resultCommitter := grpc_client.NewResultCommiter(grpcClient)
 
-	processor := worker.NewProcessor(logger, cfg.DataDir, resultCommitter)
+	processor := worker.NewProcessor(logger, cfg.DataDir, cfg.WatermarkPath, resultCommitter)
 
 	consumer, err := rabbitmq.NewConsumer(rabbitClient, cfg.TaskQueueName)
 	if err != nil {
