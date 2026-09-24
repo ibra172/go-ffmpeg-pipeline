@@ -1,24 +1,30 @@
 package task
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/apperr"
+	"github.com/ibra172/go-ffmpeg-pipeline/internal/ctxlog"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/httpresp"
 )
 
 type Handler struct {
-	Service TaskService
+	service       TaskService
+	dataDir       string // путь для сохранения файла
+	maxUploadSize int64  // максимальный размер входного файла в байтах
 }
 
-func NewHandler(service TaskService) *Handler {
+func NewHandler(service TaskService, dataDir string, maxUploadSizeMB int64) *Handler {
 	return &Handler{
-		Service: service,
+		service:       service,
+		dataDir:       dataDir,
+		maxUploadSize: maxUploadSizeMB << 20,
 	}
 }
 
@@ -55,6 +61,10 @@ type TaskResultResponse struct {
 	Error      string `json:"error,omitempty"`
 }
 
+const (
+	inMemoryFormBufferSize int64 = 10 << 20 // размер буфера парсинга multipart-формы в памяти
+)
+
 // CreateTask creates a new media-processing task.
 // @Summary Create processing task
 // @Description Creates a new media-processing job. The task is queued immediately and can be checked by its UUID through the status and result endpoints.
@@ -65,36 +75,117 @@ type TaskResultResponse struct {
 // @Security BearerAuth
 // @Success 201 {object} CreateTaskResponse "Task created successfully"
 // @Failure 400 {object} httpresp.ErrorResponse "Invalid request body"
+// @Failure 405 {object} httpresp.ErrorResponse "Invalid method"
 // @Failure 500 {object} httpresp.ErrorResponse "Internal server error"
 // @Router /task [post]
 func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	var req CreateTaskRequest
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil && !errors.Is(err, io.EOF) {
+	logger := ctxlog.FromContext(ctx)
+
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", "POST")
+		httpresp.RespondError(ctx, w, apperr.ErrMethodNotAllowed, "method not supported by the target URI")
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, h.maxUploadSize)
+
+	if err := r.ParseMultipartForm(inMemoryFormBufferSize); err != nil {
 		httpresp.RespondError(
-			ctx,
-			w,
-			fmt.Errorf("%w: %s", apperr.ErrInvalidArgument, err),
-			"invalid request body",
+			ctx, w,
+			fmt.Errorf("parse multipart form: %w: %w", err, apperr.ErrInvalidArgument),
+			"the file is too large, or the request body is malformed",
+		)
+		return
+	}
+	defer r.MultipartForm.RemoveAll()
+
+	req := CreateTaskRequest{
+		Operation:    r.FormValue("operation"),
+		TargetFormat: r.FormValue("target_format"),
+		Resolution:   r.FormValue("resolution"),
+	}
+
+	if err := validateCreateTaskRequest(req); err != nil {
+		httpresp.RespondError(ctx, w, err, "invalid task parameters")
+		return
+	}
+
+	file, fileHeader, err := r.FormFile("video")
+	if err != nil {
+		httpresp.RespondError(
+			ctx, w,
+			fmt.Errorf("read 'video' field: %w: %w", err, apperr.ErrInvalidArgument),
+			"video file is required",
+		)
+		return
+	}
+	defer file.Close()
+
+	sniff := make([]byte, 512)
+	n, err := file.Read(sniff)
+	if err != nil && err != io.EOF {
+		httpresp.RespondError(ctx, w, fmt.Errorf("read uploaded file: %w", err), "internal error")
+		return
+	}
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		httpresp.RespondError(ctx, w, fmt.Errorf("reset file offset: %w", err), "internal error")
+		return
+	}
+
+	contentType := http.DetectContentType(sniff[:n])
+	if !strings.HasPrefix(contentType, "video/") {
+		httpresp.RespondError(
+			ctx, w,
+			fmt.Errorf("uploaded content type %q is not a video: %w", contentType, apperr.ErrInvalidArgument),
+			"uploaded file does not appear to be a video",
 		)
 		return
 	}
 
-	payload := TaskPayload{
+	uploadsDir := filepath.Join(h.dataDir, "uploads")
+	if err := os.MkdirAll(uploadsDir, 0o755); err != nil {
+		httpresp.RespondError(ctx, w, fmt.Errorf("create uploads dir: %w", err), "internal error")
+		return
+	}
+
+	ext := filepath.Ext(fileHeader.Filename)
+	dstPath := filepath.Join(uploadsDir, uuid.New().String()+ext)
+
+	dst, err := os.Create(dstPath)
+	if err != nil {
+		httpresp.RespondError(ctx, w, fmt.Errorf("create destination file: %w", err), "internal error")
+		return
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, file); err != nil {
+		httpresp.RespondError(ctx, w, fmt.Errorf("write file to disk: %w", err), "error saving uploaded file")
+		return
+	}
+
+	logger.Info("file uploaded",
+		"filename", fileHeader.Filename,
+		"size", fileHeader.Size,
+		"content_type", contentType,
+		"saved_as", dstPath,
+	)
+
+	payload := Payload{
 		Operation:    req.Operation,
 		TargetFormat: req.TargetFormat,
 		Resolution:   req.Resolution,
+		InputPath:    dstPath,
 	}
 
-	task, err := h.Service.CreateTask(ctx, payload)
+	createdTask, err := h.service.CreateTask(ctx, payload)
 	if err != nil {
 		httpresp.RespondError(ctx, w, err, "failed to create task")
 		return
 	}
 
 	httpresp.RespondJSON(w, http.StatusCreated, CreateTaskResponse{
-		TaskID: task.ID.String(),
+		TaskID: createdTask.ID.String(),
 	})
 }
 
@@ -124,7 +215,7 @@ func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := h.Service.GetTaskByID(r.Context(), id)
+	task, err := h.service.GetTaskByID(r.Context(), id)
 	if err != nil {
 		httpresp.RespondError(ctx, w, err, "failed to get task")
 		return
@@ -167,7 +258,7 @@ func (h *Handler) GetResult(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := h.Service.GetTaskByID(r.Context(), id)
+	task, err := h.service.GetTaskByID(r.Context(), id)
 	if err != nil {
 		httpresp.RespondError(ctx, w, err, "failed to get task")
 		return

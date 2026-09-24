@@ -6,31 +6,32 @@ import (
 	"github.com/google/uuid"
 )
 
-type TaskStatus string
+type Status string
 
 const (
-	StatusInProgress TaskStatus = "in_progress"
-	StatusReady      TaskStatus = "ready"
-	StatusError      TaskStatus = "error"
+	StatusInProgress Status = "in_progress"
+	StatusReady      Status = "ready"
+	StatusError      Status = "error"
 )
 
-type TaskPayload struct {
+type Payload struct {
 	Operation    string
 	TargetFormat string
 	Resolution   string
+	InputPath    string
 }
 
-type TaskResult struct {
+type Result struct {
 	OutputPath string
 }
 
 // Task — доменная модель задачи.
 type Task struct {
 	ID      uuid.UUID
-	Status  TaskStatus
-	Payload TaskPayload
+	Status  Status
+	Payload Payload
 
-	Result   *TaskResult
+	Result   *Result
 	ErrorMsg string
 
 	CreatedAt time.Time

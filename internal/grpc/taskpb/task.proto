@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package task.v1;
+
+option go_package = "github.com/ibra172/go-ffmpeg-pipeline/internal/grpc/taskpb;taskpb";
+
+service TaskService {
+    rpc CommitTaskResult (TaskMessageRequest) returns (TaskMessageResponse) {}
+}
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_IN_PROGRESS = 1;
+  STATUS_READY = 2;
+  STATUS_ERROR = 3;
+}
+
+message Result {
+  string output_path = 1;
+  string error_msg = 2;
+}
+
+message TaskMessageRequest {
+  string task_id = 1;
+  Status status = 2;
+  Result result = 3;
+}
+
+message TaskMessageResponse {
+  bool success = 1;
+}
