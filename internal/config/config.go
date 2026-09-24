@@ -18,7 +18,7 @@ type Config struct {
 
 	DataDir         string `envconfig:"DATA_DIR" default:"/data"`
 	MaxUploadSizeMB int64  `envconfig:"MAX_UPLOAD_SIZE_MB" default:"500"`
-	WatermarkPath   string `envconfig:"WATERMARK_PATH" default:"resources/watermark.png"`
+	WatermarkPath   string `envconfig:"WATERMARK_PATH" default:"/resources/watermark.png"`
 
 	GRPCPort   string `envconfig:"GRPC_PORT" default:":9090"`
 	GRPCTarget string `envconfig:"GRPC_TARGET" default:"localhost:9090"`

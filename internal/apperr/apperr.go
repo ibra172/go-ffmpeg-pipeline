@@ -15,6 +15,6 @@ var (
 	// ErrUnauthorized — пользователь не авторизован (HTTP 401).
 	ErrUnauthorized = errors.New("unauthorized")
 
-    // ErrMethodNotAllowed - Метод не поддерживается (HTTP 405).
+	// ErrMethodNotAllowed - Метод не поддерживается (HTTP 405).
 	ErrMethodNotAllowed = errors.New("method not allowed")
 )

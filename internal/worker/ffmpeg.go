@@ -48,7 +48,7 @@ func buildFFmpegCommand(
 	case "transcode":
 		args = []string{"-y", "-i", msg.InputPath}
 		if msg.Resolution != "" {
-			args = append(args, "-vf", "scale="+resolutionToScale[msg.Resolution])
+			args = append(args, "-vf", "scale="+resolutionToScale[msg.Resolution], "-c:a", "copy")
 			nameWithoutExt += "_" + msg.Resolution
 		}
 		outputPath = filepath.Join(resultsDir, nameWithoutExt+"."+msg.TargetFormat)
@@ -57,7 +57,9 @@ func buildFFmpegCommand(
 		outputPath = filepath.Join(resultsDir, inputBaseName+"_logo"+inputExt)
 		args = []string{
 			"-y", "-i", msg.InputPath, "-i", watermarkPath,
-			"-filter_complex", "overlay=x=(main_w-overlay_w)/8:y=(main_h-overlay_h)/8:enable='gte(t,1)*lte(t,7)'",
+			"-filter_complex",
+			"[1:v][0:v]scale2ref=w=ih*0.15*mdar:h=ih*0.15[wm][vid];" +
+				"[vid][wm]overlay=W-w-20:H-h-20",
 			"-c:v", "libx264", "-c:a", "copy",
 			outputPath,
 		}

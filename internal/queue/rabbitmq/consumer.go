@@ -42,12 +42,12 @@ func NewConsumer(client *Client, queueName string) (*Consumer, error) {
 func (c *Consumer) Consume(consumerTag string) (<-chan amqp.Delivery, error) {
 	deliveries, err := c.client.channel.Consume(
 		c.queueName,
-		consumerTag,    // consumer tag
-		false, // autoAck
-		false, // exclusive
-		false, // noLocal
-		false, // noWait
-		nil,   // args
+		consumerTag, // consumer tag
+		false,       // autoAck
+		false,       // exclusive
+		false,       // noLocal
+		false,       // noWait
+		nil,         // args
 	)
 	if err != nil {
 		return nil, fmt.Errorf("start consuming: %w", err)
@@ -59,4 +59,3 @@ func (c *Consumer) Consume(consumerTag string) (<-chan amqp.Delivery, error) {
 func (c *Consumer) Cancel(consumerTag string) error {
 	return c.client.channel.Cancel(consumerTag, false)
 }
-	
