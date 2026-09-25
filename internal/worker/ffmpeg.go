@@ -1,4 +1,3 @@
-// internal/worker/ffmpeg.go
 package worker
 
 import (

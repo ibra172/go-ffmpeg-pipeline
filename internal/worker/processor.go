@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -13,8 +14,9 @@ import (
 type Processor struct {
 	logger        *slog.Logger
 	dataDir       string
-	committer     ResultCommitter
 	watermarkPath string
+	ffmpegTimeout time.Duration
+	committer     ResultCommitter
 }
 
 type ResultCommitter interface {
@@ -22,11 +24,12 @@ type ResultCommitter interface {
 	CommitFailure(ctx context.Context, taskID uuid.UUID, errMsg string) error
 }
 
-func NewProcessor(logger *slog.Logger, dataDir string, watermarkPath string, committer ResultCommitter) *Processor {
+func NewProcessor(logger *slog.Logger, dataDir string, watermarkPath string, ffmpegTimeout time.Duration, committer ResultCommitter) *Processor {
 	return &Processor{
 		logger:        logger,
 		dataDir:       dataDir,
 		watermarkPath: watermarkPath,
+		ffmpegTimeout: ffmpegTimeout,
 		committer:     committer,
 	}
 }
@@ -38,6 +41,9 @@ func (p *Processor) Process(ctx context.Context, msg task.Message) error {
 		"input_path", msg.InputPath,
 	)
 
+	ffmpegCtx, cancel := context.WithTimeout(ctx, p.ffmpegTimeout)
+	defer cancel()
+
 	outputPath, args, err := buildFFmpegCommand(msg, p.dataDir, p.watermarkPath)
 	if err != nil {
 		if commitErr := p.committer.CommitFailure(ctx, msg.TaskID, err.Error()); commitErr != nil {
@@ -48,12 +54,17 @@ func (p *Processor) Process(ctx context.Context, msg task.Message) error {
 		return nil
 	}
 
-	if err := runFFmpeg(ctx, args); err != nil {
+	if err := runFFmpeg(ffmpegCtx, args); err != nil {
 		if commitErr := p.committer.CommitFailure(ctx, msg.TaskID, err.Error()); commitErr != nil {
 			return fmt.Errorf("run ffmpeg: %w; commit failure also failed: %w", err, commitErr)
 		}
 
-		p.logger.Error("task failed during ffmpeg processing", "task_id", msg.TaskID, "error", err)
+		if ffmpegCtx.Err() == context.DeadlineExceeded {
+			p.logger.Error("task failed: ffmpeg exceeded timeout", "task_id", msg.TaskID, "timeout", p.ffmpegTimeout)
+		} else {
+			p.logger.Error("task failed during ffmpeg processing", "task_id", msg.TaskID, "error", err)
+		}
+		
 		return nil
 	}
 
