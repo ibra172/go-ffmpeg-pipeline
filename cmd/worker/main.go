@@ -47,9 +47,9 @@ func run(logger *slog.Logger) error {
 	}
 	defer grpcClient.Close()
 
-	resultCommitter := grpc_client.NewResultCommiter(grpcClient)
+	taskClient := grpc_client.NewTaskClient(grpcClient)
 
-	processor := worker.NewProcessor(logger, cfg.DataDir, cfg.WatermarkPath, cfg.FFmpegTimeout, resultCommitter)
+	processor := worker.NewProcessor(logger, cfg.DataDir, cfg.WatermarkPath, cfg.FFmpegTimeout, taskClient)
 
 	consumer, err := rabbitmq.NewConsumer(rabbitClient, cfg.TaskQueueName)
 	if err != nil {

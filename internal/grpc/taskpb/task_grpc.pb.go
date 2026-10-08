@@ -8,6 +8,7 @@ package taskpb
 
 import (
 	context "context"
+
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -20,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	TaskService_CommitTaskResult_FullMethodName = "/task.v1.TaskService/CommitTaskResult"
+	TaskService_GetTaskStatus_FullMethodName    = "/task.v1.TaskService/GetTaskStatus"
 )
 
 // TaskServiceClient is the client API for TaskService service.
@@ -27,6 +29,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TaskServiceClient interface {
 	CommitTaskResult(ctx context.Context, in *TaskMessageRequest, opts ...grpc.CallOption) (*TaskMessageResponse, error)
+	GetTaskStatus(ctx context.Context, in *GetTaskStatusRequest, opts ...grpc.CallOption) (*GetTaskStatusResponse, error)
 }
 
 type taskServiceClient struct {
@@ -47,11 +50,22 @@ func (c *taskServiceClient) CommitTaskResult(ctx context.Context, in *TaskMessag
 	return out, nil
 }
 
+func (c *taskServiceClient) GetTaskStatus(ctx context.Context, in *GetTaskStatusRequest, opts ...grpc.CallOption) (*GetTaskStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetTaskStatusResponse)
+	err := c.cc.Invoke(ctx, TaskService_GetTaskStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TaskServiceServer is the server API for TaskService service.
 // All implementations must embed UnimplementedTaskServiceServer
 // for forward compatibility.
 type TaskServiceServer interface {
 	CommitTaskResult(context.Context, *TaskMessageRequest) (*TaskMessageResponse, error)
+	GetTaskStatus(context.Context, *GetTaskStatusRequest) (*GetTaskStatusResponse, error)
 	mustEmbedUnimplementedTaskServiceServer()
 }
 
@@ -64,6 +78,9 @@ type UnimplementedTaskServiceServer struct{}
 
 func (UnimplementedTaskServiceServer) CommitTaskResult(context.Context, *TaskMessageRequest) (*TaskMessageResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CommitTaskResult not implemented")
+}
+func (UnimplementedTaskServiceServer) GetTaskStatus(context.Context, *GetTaskStatusRequest) (*GetTaskStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetTaskStatus not implemented")
 }
 func (UnimplementedTaskServiceServer) mustEmbedUnimplementedTaskServiceServer() {}
 func (UnimplementedTaskServiceServer) testEmbeddedByValue()                     {}
@@ -104,6 +121,24 @@ func _TaskService_CommitTaskResult_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TaskService_GetTaskStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTaskStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TaskServiceServer).GetTaskStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TaskService_GetTaskStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TaskServiceServer).GetTaskStatus(ctx, req.(*GetTaskStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TaskService_ServiceDesc is the grpc.ServiceDesc for TaskService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -114,6 +149,10 @@ var TaskService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CommitTaskResult",
 			Handler:    _TaskService_CommitTaskResult_Handler,
+		},
+		{
+			MethodName: "GetTaskStatus",
+			Handler:    _TaskService_GetTaskStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

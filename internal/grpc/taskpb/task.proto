@@ -6,6 +6,7 @@ option go_package = "github.com/ibra172/go-ffmpeg-pipeline/internal/grpc/taskpb;
 
 service TaskService {
     rpc CommitTaskResult (TaskMessageRequest) returns (TaskMessageResponse) {}
+    rpc GetTaskStatus (GetTaskStatusRequest) returns (GetTaskStatusResponse) {}
 }
 
 enum Status {
@@ -27,5 +28,14 @@ message TaskMessageRequest {
 }
 
 message TaskMessageResponse {
-  bool success = 1;
+  reserved 1;
+  reserved "success";
+}
+
+message GetTaskStatusRequest {
+  string task_id = 1;
+}
+
+message GetTaskStatusResponse {
+  Status status = 1;
 }

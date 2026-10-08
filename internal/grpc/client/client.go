@@ -3,6 +3,7 @@ package grpc_client
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -11,40 +12,77 @@ import (
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/grpc/taskpb"
 )
 
-type resultCommitter struct {
+type taskClient struct {
 	client taskpb.TaskServiceClient
 }
 
-func NewResultCommiter(conn grpc.ClientConnInterface) *resultCommitter {
-	return &resultCommitter{
+func NewTaskClient(conn grpc.ClientConnInterface) *taskClient {
+	return &taskClient{
 		client: taskpb.NewTaskServiceClient(conn),
 	}
 }
 
-func (c *resultCommitter) CommitSuccess(ctx context.Context, taskID uuid.UUID, result task.Result) error {
+func (c *taskClient) CommitSuccess(ctx context.Context, taskID uuid.UUID, result task.Result) error {
+	callCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	req := &taskpb.TaskMessageRequest{
 		TaskId: taskID.String(),
 		Status: taskpb.Status_STATUS_READY,
 		Result: &taskpb.Result{OutputPath: result.OutputPath},
 	}
-	_, err := c.client.CommitTaskResult(ctx, req)
+	_, err := c.client.CommitTaskResult(callCtx, req)
 	if err != nil {
+		if callCtx.Err() == context.DeadlineExceeded {
+			return fmt.Errorf("gRPC timeout: %w", err)
+		}
 		return fmt.Errorf("commit success result: %w", err)
 	}
 
 	return nil
 }
 
-func (c *resultCommitter) CommitFailure(ctx context.Context, taskID uuid.UUID, errMsg string) error {
+func (c *taskClient) CommitFailure(ctx context.Context, taskID uuid.UUID, errMsg string) error {
+	callCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	req := &taskpb.TaskMessageRequest{
 		TaskId: taskID.String(),
 		Status: taskpb.Status_STATUS_ERROR,
 		Result: &taskpb.Result{ErrorMsg: errMsg},
 	}
-	_, err := c.client.CommitTaskResult(ctx, req)
+	_, err := c.client.CommitTaskResult(callCtx, req)
 	if err != nil {
+		if callCtx.Err() == context.DeadlineExceeded {
+			return fmt.Errorf("gRPC timeout: %w", err)
+		}
 		return fmt.Errorf("commit failure result: %w", err)
 	}
 
 	return nil
+}
+
+func (c *taskClient) GetStatus(ctx context.Context, taskID uuid.UUID) (task.Status, error) {
+	callCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	req := &taskpb.GetTaskStatusRequest{
+		TaskId: taskID.String(),
+	}
+
+	resp, err := c.client.GetTaskStatus(callCtx, req)
+	if err != nil {
+		if callCtx.Err() == context.DeadlineExceeded {
+			return "", fmt.Errorf("gRPC timeout: %w", err)
+		}
+		return "", fmt.Errorf("get task status: %w", err)
+	}
+
+	switch resp.Status {
+	case taskpb.Status_STATUS_IN_PROGRESS:
+		return task.StatusInProgress, nil
+	case taskpb.Status_STATUS_READY:
+		return task.StatusReady, nil
+	case taskpb.Status_STATUS_ERROR:
+		return task.StatusError, nil
+	default:
+		return "", fmt.Errorf("unknown status: %+v", resp.Status)
+	}
 }

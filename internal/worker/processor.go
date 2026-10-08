@@ -16,21 +16,22 @@ type Processor struct {
 	dataDir       string
 	watermarkPath string
 	ffmpegTimeout time.Duration
-	committer     ResultCommitter
+	taskClient    TaskClient
 }
 
-type ResultCommitter interface {
+type TaskClient interface {
 	CommitSuccess(ctx context.Context, taskID uuid.UUID, result task.Result) error
 	CommitFailure(ctx context.Context, taskID uuid.UUID, errMsg string) error
+	GetStatus(ctx context.Context, taskID uuid.UUID) (task.Status, error)
 }
 
-func NewProcessor(logger *slog.Logger, dataDir string, watermarkPath string, ffmpegTimeout time.Duration, committer ResultCommitter) *Processor {
+func NewProcessor(logger *slog.Logger, dataDir string, watermarkPath string, ffmpegTimeout time.Duration, taskClient TaskClient) *Processor {
 	return &Processor{
 		logger:        logger,
 		dataDir:       dataDir,
 		watermarkPath: watermarkPath,
 		ffmpegTimeout: ffmpegTimeout,
-		committer:     committer,
+		taskClient:    taskClient,
 	}
 }
 
@@ -41,12 +42,21 @@ func (p *Processor) Process(ctx context.Context, msg task.Message) error {
 		"input_path", msg.InputPath,
 	)
 
+	taskStatus, err := p.taskClient.GetStatus(ctx, msg.TaskID)
+	if err != nil {
+		return fmt.Errorf("get task status before running ffmpeg command: %w", err)
+	}
+	if taskStatus == task.StatusReady || taskStatus == task.StatusError {
+		p.logger.Warn("task already processed", "task_id", msg.TaskID, "status", taskStatus)
+		return nil
+	}
+
 	ffmpegCtx, cancel := context.WithTimeout(ctx, p.ffmpegTimeout)
 	defer cancel()
 
 	outputPath, args, err := buildFFmpegCommand(msg, p.dataDir, p.watermarkPath)
 	if err != nil {
-		if commitErr := p.committer.CommitFailure(ctx, msg.TaskID, err.Error()); commitErr != nil {
+		if commitErr := p.taskClient.CommitFailure(ctx, msg.TaskID, err.Error()); commitErr != nil {
 			return fmt.Errorf("build ffmpeg command: %w; commit failure also failed: %w", err, commitErr)
 		}
 
@@ -55,7 +65,7 @@ func (p *Processor) Process(ctx context.Context, msg task.Message) error {
 	}
 
 	if err := runFFmpeg(ffmpegCtx, args); err != nil {
-		if commitErr := p.committer.CommitFailure(ctx, msg.TaskID, err.Error()); commitErr != nil {
+		if commitErr := p.taskClient.CommitFailure(ctx, msg.TaskID, err.Error()); commitErr != nil {
 			return fmt.Errorf("run ffmpeg: %w; commit failure also failed: %w", err, commitErr)
 		}
 
@@ -64,12 +74,12 @@ func (p *Processor) Process(ctx context.Context, msg task.Message) error {
 		} else {
 			p.logger.Error("task failed during ffmpeg processing", "task_id", msg.TaskID, "error", err)
 		}
-		
+
 		return nil
 	}
 
 	result := task.Result{OutputPath: outputPath}
-	if err := p.committer.CommitSuccess(ctx, msg.TaskID, result); err != nil {
+	if err := p.taskClient.CommitSuccess(ctx, msg.TaskID, result); err != nil {
 		return fmt.Errorf("commit success: %w", err)
 	}
 

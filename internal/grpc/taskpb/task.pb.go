@@ -187,7 +187,6 @@ func (x *TaskMessageRequest) GetResult() *Result {
 
 type TaskMessageResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -222,11 +221,92 @@ func (*TaskMessageResponse) Descriptor() ([]byte, []int) {
 	return file_internal_grpc_taskpb_task_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *TaskMessageResponse) GetSuccess() bool {
+type GetTaskStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTaskStatusRequest) Reset() {
+	*x = GetTaskStatusRequest{}
+	mi := &file_internal_grpc_taskpb_task_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTaskStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTaskStatusRequest) ProtoMessage() {}
+
+func (x *GetTaskStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_grpc_taskpb_task_proto_msgTypes[3]
 	if x != nil {
-		return x.Success
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
 	}
-	return false
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTaskStatusRequest.ProtoReflect.Descriptor instead.
+func (*GetTaskStatusRequest) Descriptor() ([]byte, []int) {
+	return file_internal_grpc_taskpb_task_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GetTaskStatusRequest) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+type GetTaskStatusResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        Status                 `protobuf:"varint,1,opt,name=status,proto3,enum=task.v1.Status" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTaskStatusResponse) Reset() {
+	*x = GetTaskStatusResponse{}
+	mi := &file_internal_grpc_taskpb_task_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTaskStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTaskStatusResponse) ProtoMessage() {}
+
+func (x *GetTaskStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_grpc_taskpb_task_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTaskStatusResponse.ProtoReflect.Descriptor instead.
+func (*GetTaskStatusResponse) Descriptor() ([]byte, []int) {
+	return file_internal_grpc_taskpb_task_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetTaskStatusResponse) GetStatus() Status {
+	if x != nil {
+		return x.Status
+	}
+	return Status_STATUS_UNSPECIFIED
 }
 
 var File_internal_grpc_taskpb_task_proto protoreflect.FileDescriptor
@@ -241,16 +321,20 @@ const file_internal_grpc_taskpb_task_proto_rawDesc = "" +
 	"\x12TaskMessageRequest\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12'\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x0f.task.v1.StatusR\x06status\x12'\n" +
-	"\x06result\x18\x03 \x01(\v2\x0f.task.v1.ResultR\x06result\"/\n" +
-	"\x13TaskMessageResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess*\\\n" +
+	"\x06result\x18\x03 \x01(\v2\x0f.task.v1.ResultR\x06result\"$\n" +
+	"\x13TaskMessageResponseJ\x04\b\x01\x10\x02R\asuccess\"/\n" +
+	"\x14GetTaskStatusRequest\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\"@\n" +
+	"\x15GetTaskStatusResponse\x12'\n" +
+	"\x06status\x18\x01 \x01(\x0e2\x0f.task.v1.StatusR\x06status*\\\n" +
 	"\x06Status\x12\x16\n" +
 	"\x12STATUS_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12STATUS_IN_PROGRESS\x10\x01\x12\x10\n" +
 	"\fSTATUS_READY\x10\x02\x12\x10\n" +
-	"\fSTATUS_ERROR\x10\x032^\n" +
+	"\fSTATUS_ERROR\x10\x032\xb0\x01\n" +
 	"\vTaskService\x12O\n" +
-	"\x10CommitTaskResult\x12\x1b.task.v1.TaskMessageRequest\x1a\x1c.task.v1.TaskMessageResponse\"\x00BCZAgithub.com/ibra172/go-ffmpeg-pipeline/internal/grpc/taskpb;taskpbb\x06proto3"
+	"\x10CommitTaskResult\x12\x1b.task.v1.TaskMessageRequest\x1a\x1c.task.v1.TaskMessageResponse\"\x00\x12P\n" +
+	"\rGetTaskStatus\x12\x1d.task.v1.GetTaskStatusRequest\x1a\x1e.task.v1.GetTaskStatusResponse\"\x00BCZAgithub.com/ibra172/go-ffmpeg-pipeline/internal/grpc/taskpb;taskpbb\x06proto3"
 
 var (
 	file_internal_grpc_taskpb_task_proto_rawDescOnce sync.Once
@@ -265,23 +349,28 @@ func file_internal_grpc_taskpb_task_proto_rawDescGZIP() []byte {
 }
 
 var file_internal_grpc_taskpb_task_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_internal_grpc_taskpb_task_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_internal_grpc_taskpb_task_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_internal_grpc_taskpb_task_proto_goTypes = []any{
-	(Status)(0),                 // 0: task.v1.Status
-	(*Result)(nil),              // 1: task.v1.Result
-	(*TaskMessageRequest)(nil),  // 2: task.v1.TaskMessageRequest
-	(*TaskMessageResponse)(nil), // 3: task.v1.TaskMessageResponse
+	(Status)(0),                   // 0: task.v1.Status
+	(*Result)(nil),                // 1: task.v1.Result
+	(*TaskMessageRequest)(nil),    // 2: task.v1.TaskMessageRequest
+	(*TaskMessageResponse)(nil),   // 3: task.v1.TaskMessageResponse
+	(*GetTaskStatusRequest)(nil),  // 4: task.v1.GetTaskStatusRequest
+	(*GetTaskStatusResponse)(nil), // 5: task.v1.GetTaskStatusResponse
 }
 var file_internal_grpc_taskpb_task_proto_depIdxs = []int32{
 	0, // 0: task.v1.TaskMessageRequest.status:type_name -> task.v1.Status
 	1, // 1: task.v1.TaskMessageRequest.result:type_name -> task.v1.Result
-	2, // 2: task.v1.TaskService.CommitTaskResult:input_type -> task.v1.TaskMessageRequest
-	3, // 3: task.v1.TaskService.CommitTaskResult:output_type -> task.v1.TaskMessageResponse
-	3, // [3:4] is the sub-list for method output_type
-	2, // [2:3] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	0, // 2: task.v1.GetTaskStatusResponse.status:type_name -> task.v1.Status
+	2, // 3: task.v1.TaskService.CommitTaskResult:input_type -> task.v1.TaskMessageRequest
+	4, // 4: task.v1.TaskService.GetTaskStatus:input_type -> task.v1.GetTaskStatusRequest
+	3, // 5: task.v1.TaskService.CommitTaskResult:output_type -> task.v1.TaskMessageResponse
+	5, // 6: task.v1.TaskService.GetTaskStatus:output_type -> task.v1.GetTaskStatusResponse
+	5, // [5:7] is the sub-list for method output_type
+	3, // [3:5] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_internal_grpc_taskpb_task_proto_init() }
@@ -295,7 +384,7 @@ func file_internal_grpc_taskpb_task_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_grpc_taskpb_task_proto_rawDesc), len(file_internal_grpc_taskpb_task_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   3,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
