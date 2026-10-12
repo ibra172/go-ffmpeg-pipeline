@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/features/task"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -14,17 +15,9 @@ type Sender struct {
 	queueName string
 }
 
-func NewSender(client *Client, queueName string) (*Sender, error) {
-	_, err := client.channel.QueueDeclare(
-		queueName,
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("declare a message queue: %w", err)
+func NewSender(client *Client, queueName string, retryDelay time.Duration) (*Sender, error) {
+	if err := client.DeclareTaskTopology(queueName, retryDelay); err != nil {
+		return nil, fmt.Errorf("declare sender queue: %w", err)
 	}
 
 	return &Sender{

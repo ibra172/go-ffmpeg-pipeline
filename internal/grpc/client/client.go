@@ -12,18 +12,20 @@ import (
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/grpc/taskpb"
 )
 
-type taskClient struct {
+const timeout = 5 * time.Second
+
+type TaskClient struct {
 	client taskpb.TaskServiceClient
 }
 
-func NewTaskClient(conn grpc.ClientConnInterface) *taskClient {
-	return &taskClient{
+func NewTaskClient(conn grpc.ClientConnInterface) *TaskClient {
+	return &TaskClient{
 		client: taskpb.NewTaskServiceClient(conn),
 	}
 }
 
-func (c *taskClient) CommitSuccess(ctx context.Context, taskID uuid.UUID, result task.Result) error {
-	callCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+func (c *TaskClient) CommitSuccess(ctx context.Context, taskID uuid.UUID, result task.Result) error {
+	callCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	req := &taskpb.TaskMessageRequest{
 		TaskId: taskID.String(),
@@ -41,8 +43,8 @@ func (c *taskClient) CommitSuccess(ctx context.Context, taskID uuid.UUID, result
 	return nil
 }
 
-func (c *taskClient) CommitFailure(ctx context.Context, taskID uuid.UUID, errMsg string) error {
-	callCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+func (c *TaskClient) CommitFailure(ctx context.Context, taskID uuid.UUID, errMsg string) error {
+	callCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	req := &taskpb.TaskMessageRequest{
 		TaskId: taskID.String(),
@@ -60,8 +62,8 @@ func (c *taskClient) CommitFailure(ctx context.Context, taskID uuid.UUID, errMsg
 	return nil
 }
 
-func (c *taskClient) GetStatus(ctx context.Context, taskID uuid.UUID) (task.Status, error) {
-	callCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+func (c *TaskClient) GetStatus(ctx context.Context, taskID uuid.UUID) (task.Status, error) {
+	callCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	req := &taskpb.GetTaskStatusRequest{
 		TaskId: taskID.String(),

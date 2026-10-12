@@ -13,8 +13,10 @@ type Config struct {
 	ShutdownTimeout time.Duration `envconfig:"SHUTDOWN_TIMEOUT" default:"10s"`
 	SwaggerDir      string        `envconfig:"SWAGGER_DIR" default:"./docs"`
 
-	AMQPURL       string `envconfig:"AMQP_URL" default:"amqp://guest:guest@127.0.0.1:5672/"`
-	TaskQueueName string `envconfig:"TASK_QUEUE_NAME" default:"tasks"`
+	AMQPURL       string        `envconfig:"AMQP_URL" default:"amqp://guest:guest@127.0.0.1:5672/"`
+	TaskQueueName string        `envconfig:"TASK_QUEUE_NAME" default:"tasks"`
+	RetryDelay    time.Duration `envconfig:"RETRY_DELAY" default:"10s"`
+	MaxRetries    int64         `envconfig:"MAX_RETRIES" default:"5"`
 
 	DataDir         string        `envconfig:"DATA_DIR" default:"/data"`
 	MaxUploadSizeMB int64         `envconfig:"MAX_UPLOAD_SIZE_MB" default:"500"`

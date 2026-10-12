@@ -54,7 +54,7 @@ func run(logger *slog.Logger) error {
 	}
 	defer rabbitmqClient.Close()
 
-	taskSender, err := rabbitmq.NewSender(rabbitmqClient, cfg.TaskQueueName)
+	taskSender, err := rabbitmq.NewSender(rabbitmqClient, cfg.TaskQueueName, cfg.RetryDelay)
 	if err != nil {
 		return fmt.Errorf("failed to create rabbitMQ sender: %w", err)
 	}
