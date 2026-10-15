@@ -1,40 +1,40 @@
 basePath: /
 definitions:
-  auth.LoginRequest:
+  github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse:
+    properties:
+      error:
+        description: Error holds a public error message.
+        type: string
+    type: object
+  internal_features_auth.LoginRequest:
     properties:
       password:
         type: string
       username:
         type: string
     type: object
-  auth.LoginResponse:
+  internal_features_auth.LoginResponse:
     properties:
       expires_at:
         type: string
       token:
         type: string
     type: object
-  auth.RegisterRequest:
+  internal_features_auth.RegisterRequest:
     properties:
       password:
         type: string
       username:
         type: string
     type: object
-  auth.RegisterResponse:
+  internal_features_auth.RegisterResponse:
     properties:
       user_id:
         type: string
       username:
         type: string
     type: object
-  httpresp.ErrorResponse:
-    properties:
-      error:
-        description: Error holds a public error message.
-        type: string
-    type: object
-  task.CreateTaskRequest:
+  internal_features_task.CreateTaskRequest:
     properties:
       operation:
         description: 'Operation defines the type of job to run. Examples: transcode,
@@ -49,25 +49,22 @@ definitions:
           mov, etc.
         type: string
     type: object
-  task.CreateTaskResponse:
+  internal_features_task.CreateTaskResponse:
     properties:
       task_id:
         description: TaskID is the generated UUID of the created task.
         type: string
     type: object
-  task.TaskErrorResponse:
+  internal_features_task.TaskResultResponse:
     properties:
       error:
+        type: string
+      output_path:
         type: string
       status:
         type: string
     type: object
-  task.TaskResultResponse:
-    properties:
-      output_path:
-        type: string
-    type: object
-  task.TaskStatusResponse:
+  internal_features_task.TaskStatusResponse:
     properties:
       status:
         description: Status can be in_progress, ready, or error.
@@ -92,26 +89,26 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/auth.LoginRequest'
+          $ref: '#/definitions/internal_features_auth.LoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: User logged in successfully
           schema:
-            $ref: '#/definitions/auth.LoginResponse'
+            $ref: '#/definitions/internal_features_auth.LoginResponse'
         "400":
           description: Invalid request body
           schema:
-            $ref: '#/definitions/httpresp.ErrorResponse'
+            $ref: '#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse'
         "401":
           description: Invalid username or password
           schema:
-            $ref: '#/definitions/httpresp.ErrorResponse'
+            $ref: '#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/httpresp.ErrorResponse'
+            $ref: '#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse'
       summary: Login user
       tags:
       - auth
@@ -126,26 +123,26 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/auth.RegisterRequest'
+          $ref: '#/definitions/internal_features_auth.RegisterRequest'
       produces:
       - application/json
       responses:
         "201":
           description: User registered successfully
           schema:
-            $ref: '#/definitions/auth.RegisterResponse'
+            $ref: '#/definitions/internal_features_auth.RegisterResponse'
         "400":
           description: Invalid request body
           schema:
-            $ref: '#/definitions/httpresp.ErrorResponse'
+            $ref: '#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse'
         "409":
           description: Username already exists
           schema:
-            $ref: '#/definitions/httpresp.ErrorResponse'
+            $ref: '#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/httpresp.ErrorResponse'
+            $ref: '#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse'
       summary: Register new user
       tags:
       - auth
@@ -164,25 +161,25 @@ paths:
       - application/json
       responses:
         "200":
-          description: Task finished successfully
+          description: Task finished (see status field for success/error)
           schema:
-            $ref: '#/definitions/task.TaskResultResponse'
+            $ref: '#/definitions/internal_features_task.TaskResultResponse'
         "202":
           description: Task is still being processed
           schema:
-            $ref: '#/definitions/task.TaskStatusResponse'
+            $ref: '#/definitions/internal_features_task.TaskStatusResponse'
         "400":
           description: Invalid UUID format
           schema:
-            $ref: '#/definitions/httpresp.ErrorResponse'
+            $ref: '#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse'
         "404":
           description: Task not found
           schema:
-            $ref: '#/definitions/httpresp.ErrorResponse'
+            $ref: '#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/httpresp.ErrorResponse'
+            $ref: '#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get task result
@@ -205,23 +202,23 @@ paths:
         "200":
           description: Current task status
           schema:
-            $ref: '#/definitions/task.TaskStatusResponse'
+            $ref: '#/definitions/internal_features_task.TaskStatusResponse'
         "202":
           description: Task is still processing
           schema:
-            $ref: '#/definitions/task.TaskStatusResponse'
+            $ref: '#/definitions/internal_features_task.TaskStatusResponse'
         "400":
           description: Invalid UUID format
           schema:
-            $ref: '#/definitions/httpresp.ErrorResponse'
+            $ref: '#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse'
         "404":
           description: Task not found
           schema:
-            $ref: '#/definitions/httpresp.ErrorResponse'
+            $ref: '#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/httpresp.ErrorResponse'
+            $ref: '#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get task status
@@ -239,22 +236,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/task.CreateTaskRequest'
+          $ref: '#/definitions/internal_features_task.CreateTaskRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Task created successfully
           schema:
-            $ref: '#/definitions/task.CreateTaskResponse'
+            $ref: '#/definitions/internal_features_task.CreateTaskResponse'
         "400":
           description: Invalid request body
           schema:
-            $ref: '#/definitions/httpresp.ErrorResponse'
+            $ref: '#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/httpresp.ErrorResponse'
+            $ref: '#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Create processing task

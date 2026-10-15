@@ -9,9 +9,12 @@ var (
 	// ErrInvalidArgument — переданы некорректные данные (HTTP 400).
 	ErrInvalidArgument = errors.New("invalid argument")
 
-	// ErrConflict — конфликт при обновлении (HTTP 409)
+	// ErrConflict — конфликт при обновлении (HTTP 409).
 	ErrConflict = errors.New("conflict")
 
 	// ErrUnauthorized — пользователь не авторизован (HTTP 401).
 	ErrUnauthorized = errors.New("unauthorized")
+
+	// ErrMethodNotAllowed - Метод не поддерживается (HTTP 405).
+	ErrMethodNotAllowed = errors.New("method not allowed")
 )
