@@ -23,6 +23,9 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
+      - name: Prepare environment config
+        run: cp .env.example .env
+
       - name: Lint
         run: make lint
 
