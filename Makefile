@@ -33,8 +33,8 @@ run-worker: ## Запустить worker локально (RabbitMQ и API до�
 build: GO_BIN ?= go
 
 build: ## Собрать бинарники app и worker в bin/
-	$(GO_BIN) build -o $(BIN_DIR)/app ./cmd/app
-	$(GO_BIN) build -o $(BIN_DIR)/worker ./cmd/worker
+	go build -o $(BIN_DIR)/app ./cmd/app
+	go build -o $(BIN_DIR)/worker ./cmd/worker
 
 # requires: protoc, protoc-gen-go, protoc-gen-go-grpc
 # install:  go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
@@ -51,11 +51,11 @@ fmt: ## Отформатировать Go-файлы проекта
 	gofmt -w .
 
 lint: ## Прогнать go vet и проверку форматирования
-	$(GO_BIN) vet ./...
+	go vet ./...
 	@test -z "$$(gofmt -l .)" || (echo "unformatted files:"; gofmt -l .; exit 1)
 
 test: ## Прогнать Go-тесты
-	$(GO_BIN) test ./... -v
+	go test ./... -v
 
 ## ---- docker ------------------------------------------------------------
 
