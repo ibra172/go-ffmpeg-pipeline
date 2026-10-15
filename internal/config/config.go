@@ -18,11 +18,11 @@ type Config struct {
 	RetryDelay    time.Duration `envconfig:"RETRY_DELAY" default:"10s"`
 	MaxRetries    int64         `envconfig:"MAX_RETRIES" default:"5"`
 
-	DataDir         string        `envconfig:"DATA_DIR" default:"/data"`
-	MaxUploadSizeMB int64         `envconfig:"MAX_UPLOAD_SIZE_MB" default:"500"`
+	DataDir         string `envconfig:"DATA_DIR" default:"/data"`
+	MaxUploadSizeMB int64  `envconfig:"MAX_UPLOAD_SIZE_MB" default:"500"`
 
-	WatermarkPath   string        `envconfig:"WATERMARK_PATH" default:"/resources/watermark.png"`
-	FFmpegTimeout   time.Duration `envconfig:"FFMPEG_TIMEOUT" default:"4m"`
+	WatermarkPath string        `envconfig:"WATERMARK_PATH" default:"/resources/watermark.png"`
+	FFmpegTimeout time.Duration `envconfig:"FFMPEG_TIMEOUT" default:"4m"`
 
 	GRPCPort   string `envconfig:"GRPC_PORT" default:":9090"`
 	GRPCTarget string `envconfig:"GRPC_TARGET" default:"localhost:9090"`
