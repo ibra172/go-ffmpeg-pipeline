@@ -94,7 +94,7 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		httpresp.RespondError(
 			ctx, w,
 			fmt.Errorf("parse multipart form: %w: %w", err, apperr.ErrInvalidArgument),
-			"the file is too large, or the request body is malformed",
+			"the file is too large, or the request body has an incorrect format",
 		)
 		return
 	}
