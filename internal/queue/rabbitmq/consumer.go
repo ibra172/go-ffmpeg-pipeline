@@ -13,6 +13,7 @@ type Consumer struct {
 	client     *Client
 	queueName  string
 	maxRetries int64
+	returns    <-chan amqp.Return
 }
 
 func NewConsumer(client *Client, queueName string, retryDelay time.Duration, maxRetries int64) (*Consumer, error) {
@@ -33,10 +34,17 @@ func NewConsumer(client *Client, queueName string, retryDelay time.Duration, max
 		return nil, fmt.Errorf("set QoS: %w", err)
 	}
 
+	if err := client.channel.Confirm(false); err != nil {
+		return nil, fmt.Errorf("enable publisher confirms: %w", err)
+	}
+
+	returns := client.channel.NotifyReturn(make(chan amqp.Return, 1))
+
 	return &Consumer{
 		client:     client,
 		queueName:  queueName,
 		maxRetries: maxRetries,
+		returns:    returns,
 	}, nil
 }
 
@@ -140,12 +148,12 @@ func (c *Consumer) publishToDead(ctx context.Context, delivery amqp.Delivery, re
 	maps.Copy(headers, delivery.Headers)
 	headers["x-dead-reason"] = reason
 
-	return c.client.channel.PublishWithContext(
+	confirmation, err := c.client.channel.PublishWithDeferredConfirmWithContext(
 		ctx,
 		"",
 		c.queueName+".dead",
-		false,
-		false,
+		true,  // mandatory
+		false, // immediate
 		amqp.Publishing{
 			ContentType:  delivery.ContentType,
 			DeliveryMode: amqp.Persistent,
@@ -153,4 +161,29 @@ func (c *Consumer) publishToDead(ctx context.Context, delivery amqp.Delivery, re
 			Headers:      headers,
 		},
 	)
+	if err != nil {
+		return fmt.Errorf("publishing: %w", err)
+	}
+
+	acked, err := confirmation.WaitContext(ctx)
+	if err != nil {
+		return fmt.Errorf("wait publisher confirmation: %w", err)
+	}
+	if !acked {
+		return fmt.Errorf("broker did not confirm DLQ publication")
+	}
+
+	select {
+	case returned, ok := <-c.returns:
+		if !ok {
+			return fmt.Errorf("publisher returns channel closed")
+		}
+		return fmt.Errorf(
+			"DLQ publication returned: %d %s",
+			returned.ReplyCode,
+			returned.ReplyText,
+		)
+	default:
+		return nil
+	}
 }
