@@ -20,6 +20,7 @@ type Config struct {
 
 	DataDir         string        `envconfig:"DATA_DIR" default:"/data"`
 	MaxUploadSizeMB int64         `envconfig:"MAX_UPLOAD_SIZE_MB" default:"500"`
+
 	WatermarkPath   string        `envconfig:"WATERMARK_PATH" default:"/resources/watermark.png"`
 	FFmpegTimeout   time.Duration `envconfig:"FFMPEG_TIMEOUT" default:"4m"`
 
