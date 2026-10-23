@@ -10,6 +10,8 @@ BIN_DIR := $(PROJECT_ROOT)/bin
 
 .PHONY: help build proto fmt lint test run-app run-worker \
         service-deploy service-undeploy service-logs \
+		env-up env-down env-cleanup env-port-forward env-port-close \
+		migrate-create migrate-up migrate-down migrate-action \
         test-env-up hw1-test hw2-test
 
 ## ---- local run ------------------------------------------------------------
@@ -70,6 +72,55 @@ service-undeploy: ## Остановить все сервисы
 
 service-logs: ## Смотреть логи всех сервисов в реальном времени
 	docker compose logs -f
+
+env-up: ## Запустить окружение проекта
+	@docker compose up -d postgres
+
+env-down: ## Остановить окружение проекта
+	@docker compose down postgres
+
+env-cleanup: ## env: Очистить окружение проекта
+	@read -p "Очистить все volume файлы окружения? Опасность утери данных. [y/N]: " ans; \
+	if [ "$$ans" = "y" ]; then \
+		docker compose down postgres && \
+		rm -rf ${PROJECT_ROOT}/out/pgdata && \
+		echo "Файлы окружения очищены"; \
+	else \
+		echo "Очистка окружения отменена"; \
+	fi
+
+env-port-forward: ## Открыть порты сервисов окружения
+	@docker compose up -d port-forwarder
+
+env-port-close: ## Закрыть порты сервисов окружения
+	@docker compose down port-forwarder
+
+migrate-create: ## Создать новую версию схемы данных
+	@if [ -z "$(seq)" ]; then \
+		echo "Отсутсвует необходимый параметр seq. Пример: make migrate-create seq=init"; \
+		exit 1; \
+	fi; \
+	docker compose run --rm postgres-migrate \
+		create \
+		-ext sql \
+		-dir /migrations \
+		-seq "$(seq)"
+
+migrate-up: ## Накатить миграции
+	@$(MAKE) migrate-action action=up
+
+migrate-down: ## Откатить миграции
+	@$(MAKE) migrate-action action=down
+
+migrate-action:
+	@if [ -z "$(action)" ]; then \
+		echo "Отсутсвует необходимый параметр action. Пример: make migrate-action action=up"; \
+		exit 1; \
+	fi; \
+	docker compose run --rm postgres-migrate \
+		-path /migrations \
+		-database "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable" \
+		"$(action)"
 
 ## ---- python tests ----------------------------
 

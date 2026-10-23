@@ -9,23 +9,28 @@ import (
 
 // Config хранит все настройки приложения, читается из переменных окружения.
 type Config struct {
-	Port            string        `envconfig:"HTTP_PORT" default:":8000"`
+	Port            string        `envconfig:"HTTP_PORT"        default:":8000"`
 	ShutdownTimeout time.Duration `envconfig:"SHUTDOWN_TIMEOUT" default:"10s"`
-	SwaggerDir      string        `envconfig:"SWAGGER_DIR" default:"./docs"`
+	SwaggerDir      string        `envconfig:"SWAGGER_DIR"      default:"./docs"`
 
-	AMQPURL       string        `envconfig:"AMQP_URL" default:"amqp://guest:guest@127.0.0.1:5672/"`
+	AMQPURL       string        `envconfig:"AMQP_URL"        default:"amqp://guest:guest@127.0.0.1:5672/"`
 	TaskQueueName string        `envconfig:"TASK_QUEUE_NAME" default:"tasks"`
-	RetryDelay    time.Duration `envconfig:"RETRY_DELAY" default:"10s"`
-	MaxRetries    int64         `envconfig:"MAX_RETRIES" default:"5"`
+	RetryDelay    time.Duration `envconfig:"RETRY_DELAY"     default:"10s"`
+	MaxRetries    int64         `envconfig:"MAX_RETRIES"     default:"5"`
 
-	DataDir         string `envconfig:"DATA_DIR" default:"/data"`
+	DataDir         string `envconfig:"DATA_DIR"           default:"/data"`
 	MaxUploadSizeMB int64  `envconfig:"MAX_UPLOAD_SIZE_MB" default:"500"`
 
 	WatermarkPath string        `envconfig:"WATERMARK_PATH" default:"/resources/watermark.png"`
 	FFmpegTimeout time.Duration `envconfig:"FFMPEG_TIMEOUT" default:"4m"`
 
-	GRPCPort   string `envconfig:"GRPC_PORT" default:":9090"`
+	GRPCPort   string `envconfig:"GRPC_PORT"   default:":9090"`
 	GRPCTarget string `envconfig:"GRPC_TARGET" default:"localhost:9090"`
+
+	PostgresPort     string `envconfig:"POSTGRES_PORT"     default:"5432"`
+	PostgresUser     string `envconfig:"POSTGRES_USER"`
+	PostgresPassword string `envconfig:"POSTGRES_PASSWORD" required:"true"`
+	PostgresDatabase string `envconfig:"POSTGRES_DB"       required:"true"`
 }
 
 func New() (Config, error) {
