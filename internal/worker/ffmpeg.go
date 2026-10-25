@@ -39,27 +39,35 @@ func buildFFmpegCommand(
 	case "thumbnail":
 		outputPath = filepath.Join(resultsDir, nameWithoutExt+"_preview.jpg")
 		args = []string{
-			"-y", "-ss", "00:00:01", "-i", msg.InputPath,
+			"-y", "-i", msg.InputPath,
 			"-vf", "thumbnail,smartblur,unsharp",
 			"-vframes", "1", "-q:v", "2",
 			outputPath,
 		}
 	case "transcode":
 		args = []string{"-y", "-i", msg.InputPath}
+		switch msg.TargetFormat {
+		case "mp4", "mov", "mkv":
+			args = append(args, "-c:v", "libx264", "-c:a", "aac")
+		case "webm":
+			args = append(args, "-c:v", "libvpx-vp9", "-c:a", "libopus")
+		default:
+			return "", nil, fmt.Errorf("unknown video format: %s", msg.TargetFormat)
+		}
 		if msg.Resolution != "" {
-			args = append(args, "-vf", "scale="+resolutionToScale[msg.Resolution], "-c:a", "copy")
+			args = append(args, "-vf", "scale="+resolutionToScale[msg.Resolution])
 			nameWithoutExt += "_" + msg.Resolution
 		}
 		outputPath = filepath.Join(resultsDir, nameWithoutExt+"."+msg.TargetFormat)
 		args = append(args, outputPath)
 	case "watermark":
-		outputPath = filepath.Join(resultsDir, inputBaseName+"_logo"+inputExt)
+		outputPath = filepath.Join(resultsDir, nameWithoutExt+"_logo.mp4")
 		args = []string{
 			"-y", "-i", msg.InputPath, "-i", watermarkPath,
 			"-filter_complex",
 			"[1:v][0:v]scale2ref=w=ih*0.15*mdar:h=ih*0.15[wm][vid];" +
 				"[vid][wm]overlay=W-w-20:H-h-20",
-			"-c:v", "libx264", "-c:a", "copy",
+			"-c:v", "libx264", "-c:a", "aac",
 			outputPath,
 		}
 	default:
@@ -69,7 +77,7 @@ func buildFFmpegCommand(
 	return outputPath, args, nil
 }
 
-func runFFmpeg(ctx context.Context, args []string) error {
+func runFFmpeg(ctx context.Context, args []string, outputPath string) error {
 	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
 
 	var stderr bytes.Buffer
@@ -77,6 +85,17 @@ func runFFmpeg(ctx context.Context, args []string) error {
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("ffmpeg failed: %w: %s", err, stderr.String())
+	}
+
+	fileinfo, err := os.Stat(outputPath)
+	if err != nil {
+		return fmt.Errorf("stat ffmpeg output %q: %w", outputPath, err)
+	}
+	if !fileinfo.Mode().IsRegular() {
+		return fmt.Errorf("ffmpeg output %q is not a regular file", outputPath)
+	}
+	if fileinfo.Size() == int64(0) {
+		return fmt.Errorf("ffmpeg output %q is empty", outputPath)
 	}
 
 	return nil
