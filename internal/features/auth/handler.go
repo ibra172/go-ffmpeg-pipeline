@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -75,7 +76,17 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.Service.Register(ctx, request.Username, request.Password)
 	if err != nil {
-		httpresp.RespondError(ctx, w, err, "failed to register")
+		publicMsg := "failed to register"
+
+		var validationErr *validationError
+		switch {
+		case errors.As(err, &validationErr):
+			publicMsg = validationErr.message
+		case errors.Is(err, apperr.ErrConflict):
+			publicMsg = "username is already taken"
+		}
+
+		httpresp.RespondError(ctx, w, err, publicMsg)
 		return
 	}
 

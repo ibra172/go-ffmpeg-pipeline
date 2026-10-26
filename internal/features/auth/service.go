@@ -40,6 +40,10 @@ var (
 )
 
 func (s *AuthService) Register(ctx context.Context, username string, password string) (*User, error) {
+	if err := validateRegistration(username, password); err != nil {
+		return &User{}, fmt.Errorf("validate registration: %w", err)
+	}
+
 	_, err := s.UserRepository.GetUserByUsername(ctx, username)
 	if err == nil {
 		return &User{}, fmt.Errorf("the username `%s` is already taken: %w", username, apperr.ErrConflict)

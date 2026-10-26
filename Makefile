@@ -11,6 +11,7 @@ BIN_DIR := $(PROJECT_ROOT)/bin
 .PHONY: help build proto fmt lint test run-app run-worker \
         service-deploy service-undeploy service-logs \
 		env-up env-down env-cleanup env-port-forward env-port-close \
+		broker-up broker-down \
 		migrate-create migrate-up migrate-down migrate-action \
         test-env-up hw1-test hw2-test
 
@@ -23,6 +24,7 @@ run-app run-worker: export DATA_DIR := $(PROJECT_ROOT)/data
 run-app run-worker: export SWAGGER_DIR := $(PROJECT_ROOT)/docs
 run-app run-worker: export GRPC_TARGET := localhost:9090
 run-app run-worker: export WATERMARK_PATH := $(PROJECT_ROOT)/resources/watermark.png
+run-app: export POSTGRES_HOST := localhost
 
 run-app: ## Запустить API локально (RabbitMQ должен быть запущен)
 	$(GO_BIN) run ./cmd/app
@@ -95,6 +97,12 @@ env-port-forward: ## Открыть порты сервисов окружени
 env-port-close: ## Закрыть порты сервисов окружения
 	@docker compose down port-forwarder
 
+broker-up: ## Запустить очередь сообщений RabbitMQ
+	@docker compose up -d queue
+
+broker-down: ## Остановить брокер сообщений
+	@docker compose down queue
+
 migrate-create: ## Создать новую версию схемы данных
 	@if [ -z "$(seq)" ]; then \
 		echo "Отсутсвует необходимый параметр seq. Пример: make migrate-create seq=init"; \
@@ -119,7 +127,7 @@ migrate-action:
 	fi; \
 	docker compose run --rm postgres-migrate \
 		-path /migrations \
-		-database "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable" \
+		-database "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable" \
 		"$(action)"
 
 ## ---- python tests ----------------------------

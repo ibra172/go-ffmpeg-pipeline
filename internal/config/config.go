@@ -27,10 +27,12 @@ type Config struct {
 	GRPCPort   string `envconfig:"GRPC_PORT"   default:":9090"`
 	GRPCTarget string `envconfig:"GRPC_TARGET" default:"localhost:9090"`
 
-	PostgresPort     string `envconfig:"POSTGRES_PORT"     default:"5432"`
-	PostgresUser     string `envconfig:"POSTGRES_USER"`
-	PostgresPassword string `envconfig:"POSTGRES_PASSWORD" required:"true"`
-	PostgresDatabase string `envconfig:"POSTGRES_DB"       required:"true"`
+	PostgresPort         string        `envconfig:"POSTGRES_PORT"          default:"5432"`
+	PostgresHost         string        `envconfig:"POSTGRES_HOST"          default:"localhost"`
+	PostgresUser         string        `envconfig:"POSTGRES_USER"`
+	PostgresPassword     string        `envconfig:"POSTGRES_PASSWORD"      required:"true"`
+	PostgresDatabase     string        `envconfig:"POSTGRES_DB"            required:"true"`
+	PostgresQueryTimeout time.Duration `envconfig:"POSTGRES_QUERY_TIMEOUT" default:"3s"`
 }
 
 func New() (Config, error) {
