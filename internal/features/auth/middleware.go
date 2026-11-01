@@ -22,7 +22,7 @@ func UserFromContext(ctx context.Context) (*User, bool) {
 	return user, ok
 }
 
-func RequireAuth(service Service) func(http.Handler) http.Handler {
+func RequireAuthentication(service Service) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()

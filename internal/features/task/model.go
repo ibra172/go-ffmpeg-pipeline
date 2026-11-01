@@ -36,4 +36,6 @@ type Task struct {
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
+
+	UserID uuid.UUID
 }

@@ -49,7 +49,14 @@ func (r *RamRepository) UpdateTask(ctx context.Context, task *Task) error {
 		return fmt.Errorf("task with ID=`%v`: %w", task.ID, apperr.ErrNotFound)
 	}
 
-	r.data[task.ID] = task
+	if r.data[task.ID].Status != StatusInProgress {
+		return fmt.Errorf("task cannot be updated: %w", apperr.ErrConflict)
+	}
+
+	r.data[task.ID].Status = task.Status
+	r.data[task.ID].Result = task.Result
+	r.data[task.ID].ErrorMsg = task.ErrorMsg
+	r.data[task.ID].UpdatedAt = task.UpdatedAt
 
 	return nil
 }

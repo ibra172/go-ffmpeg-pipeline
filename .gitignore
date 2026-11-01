@@ -3,3 +3,4 @@ tests
 .vscode
 .env
 /out
+/data/

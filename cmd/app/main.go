@@ -83,15 +83,11 @@ func run(logger *slog.Logger) error {
 		return fmt.Errorf("failed to create rabbitMQ sender: %w", err)
 	}
 
-	taskRepository := task.NewRamRepository()
-
+	taskRepository := task.NewPostgresRepository(postgresPool, cfg.PostgresQueryTimeout)
 	taskService := task.NewService(taskRepository, taskSender, cfg.DataDir)
 	taskHandler := task.NewHandler(taskService, cfg.DataDir, cfg.MaxUploadSizeMB)
 
-	userRepository := auth.NewUserPostgresRepository(
-		postgresPool,
-		cfg.PostgresQueryTimeout,
-	)
+	userRepository := auth.NewUserPostgresRepository(postgresPool, cfg.PostgresQueryTimeout)
 	sessionRepository := auth.NewSessionRamRepo()
 	authService := auth.NewService(userRepository, sessionRepository)
 	authHandler := auth.NewHandler(authService)
@@ -101,7 +97,7 @@ func run(logger *slog.Logger) error {
 	mux.HandleFunc("POST /register", authHandler.Register)
 	mux.HandleFunc("POST /login", authHandler.Login)
 
-	authMiddleware := auth.RequireAuth(authService)
+	authMiddleware := auth.RequireAuthentication(authService)
 
 	mux.Handle("POST /task", authMiddleware(http.HandlerFunc(taskHandler.CreateTask)))
 	mux.Handle("GET /status/{id}", authMiddleware(http.HandlerFunc(taskHandler.GetStatus)))

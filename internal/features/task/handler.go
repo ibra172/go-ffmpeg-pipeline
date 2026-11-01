@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/apperr"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/ctxlog"
+	"github.com/ibra172/go-ffmpeg-pipeline/internal/features/auth"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/httpresp"
 )
 
@@ -81,6 +82,12 @@ const (
 func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := ctxlog.FromContext(ctx)
+
+	user, ok := auth.UserFromContext(ctx)
+	if !ok {
+		httpresp.RespondError(ctx, w, apperr.ErrUnauthorized, "authentication required")
+		return
+	}
 
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", "POST")
@@ -178,7 +185,7 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		InputPath:    dstPath,
 	}
 
-	createdTask, err := h.service.CreateTask(ctx, payload)
+	createdTask, err := h.service.CreateTask(ctx, user.ID, payload)
 	if err != nil {
 		httpresp.RespondError(ctx, w, err, "failed to create task")
 		return
@@ -204,7 +211,13 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 // @Router /status/{id} [get]
 func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	id, err := uuid.Parse(r.PathValue("id"))
+	user, ok := auth.UserFromContext(ctx)
+	if !ok {
+		httpresp.RespondError(ctx, w, apperr.ErrUnauthorized, "authentication required")
+		return
+	}
+
+	taskID, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		httpresp.RespondError(
 			ctx,
@@ -215,7 +228,7 @@ func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := h.service.GetTaskByID(r.Context(), id)
+	task, err := h.service.GetTaskForUser(ctx, taskID, user.ID)
 	if err != nil {
 		httpresp.RespondError(ctx, w, err, "failed to get task")
 		return
@@ -247,7 +260,12 @@ func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 // @Router /result/{id} [get]
 func (h *Handler) GetResult(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	id, err := uuid.Parse(r.PathValue("id"))
+	user, ok := auth.UserFromContext(ctx)
+	if !ok {
+		httpresp.RespondError(ctx, w, apperr.ErrUnauthorized, "authentication required")
+		return
+	}
+	taskID, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		httpresp.RespondError(
 			ctx,
@@ -258,7 +276,7 @@ func (h *Handler) GetResult(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := h.service.GetTaskByID(r.Context(), id)
+	task, err := h.service.GetTaskForUser(ctx, taskID, user.ID)
 	if err != nil {
 		httpresp.RespondError(ctx, w, err, "failed to get task")
 		return
