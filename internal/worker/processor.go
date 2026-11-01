@@ -64,7 +64,7 @@ func (p *Processor) Process(ctx context.Context, msg task.Message) error {
 		return nil
 	}
 
-	if err := runFFmpeg(ffmpegCtx, args); err != nil {
+	if err := runFFmpeg(ffmpegCtx, args, outputPath); err != nil {
 		if commitErr := p.taskClient.CommitFailure(ctx, msg.TaskID, err.Error()); commitErr != nil {
 			return fmt.Errorf("run ffmpeg: %w; commit failure also failed: %w", err, commitErr)
 		}

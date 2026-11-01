@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/ibra172/go-ffmpeg-pipeline/docs"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/config"
@@ -19,6 +20,7 @@ import (
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/grpc/taskpb"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/middleware"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/queue/rabbitmq"
+	"github.com/ibra172/go-ffmpeg-pipeline/internal/storage/postgres"
 	"google.golang.org/grpc"
 
 	httpSwagger "github.com/swaggo/http-swagger"
@@ -26,7 +28,7 @@ import (
 
 // @title        Media Pipeline App API
 // @version      1.0
-// @description  API Server for a Multimedia Processor Application using FFmpeg
+// @description Asynchronous video processing API using FFmpeg. Register and log in, then enter Bearer <token> in Authorize to access protected endpoints.
 
 // @host         127.0.0.1:8000
 // @BasePath     /
@@ -45,8 +47,30 @@ func main() {
 
 func run(logger *slog.Logger) error {
 	cfg := config.MustNew()
+
+	ctx, stop := signal.NotifyContext(
+		context.Background(),
+		os.Interrupt,
+		syscall.SIGTERM,
+	)
+	defer stop()
+
 	// set swagger host dynamically from config
 	docs.SwaggerInfo.Host = "127.0.0.1" + cfg.Port
+
+	poolInitCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	postgresPool, err := postgres.NewPool(poolInitCtx, cfg)
+	cancel()
+	if err != nil {
+		return fmt.Errorf("failed to init postgres connection pool: %w", err)
+	}
+	defer postgresPool.Close()
+
+	logger.Info("postgres connection pool initialized",
+		"host", cfg.PostgresHost,
+		"port", cfg.PostgresPort,
+		"database", cfg.PostgresDatabase,
+	)
 
 	rabbitmqClient, err := rabbitmq.NewClient(cfg.AMQPURL)
 	if err != nil {
@@ -59,12 +83,11 @@ func run(logger *slog.Logger) error {
 		return fmt.Errorf("failed to create rabbitMQ sender: %w", err)
 	}
 
-	taskRepository := task.NewRamRepository()
-
+	taskRepository := task.NewPostgresRepository(postgresPool, cfg.PostgresQueryTimeout)
 	taskService := task.NewService(taskRepository, taskSender, cfg.DataDir)
 	taskHandler := task.NewHandler(taskService, cfg.DataDir, cfg.MaxUploadSizeMB)
 
-	userRepository := auth.NewUserRamRepository()
+	userRepository := auth.NewUserPostgresRepository(postgresPool, cfg.PostgresQueryTimeout)
 	sessionRepository := auth.NewSessionRamRepo()
 	authService := auth.NewService(userRepository, sessionRepository)
 	authHandler := auth.NewHandler(authService)
@@ -74,7 +97,7 @@ func run(logger *slog.Logger) error {
 	mux.HandleFunc("POST /register", authHandler.Register)
 	mux.HandleFunc("POST /login", authHandler.Login)
 
-	authMiddleware := auth.RequireAuth(authService)
+	authMiddleware := auth.RequireAuthentication(authService)
 
 	mux.Handle("POST /task", authMiddleware(http.HandlerFunc(taskHandler.CreateTask)))
 	mux.Handle("GET /status/{id}", authMiddleware(http.HandlerFunc(taskHandler.GetStatus)))
@@ -100,13 +123,6 @@ func run(logger *slog.Logger) error {
 
 	grpcServer := grpc.NewServer()
 	taskpb.RegisterTaskServiceServer(grpcServer, task.NewGRPCHandler(taskService))
-
-	ctx, stop := signal.NotifyContext(
-		context.Background(),
-		os.Interrupt,
-		syscall.SIGTERM,
-	)
-	defer stop()
 
 	errCh := make(chan error, 1)
 	go func() {

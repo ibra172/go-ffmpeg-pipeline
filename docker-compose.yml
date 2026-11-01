@@ -3,7 +3,7 @@ services:
     build:
       context: ${PROJECT_ROOT}
       dockerfile: ${PROJECT_ROOT}/cmd/app/Dockerfile
-    container_name: media-pipeline
+    container_name: media-pipeline-app
     ports:
       - "8000:8000"
     env_file:
@@ -12,6 +12,8 @@ services:
       - ${PROJECT_ROOT}/data:/data
     depends_on:
       queue:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
 
   worker:
@@ -26,7 +28,7 @@ services:
     depends_on:
       queue:
         condition: service_healthy
-  
+
   queue:
     image: "rabbitmq:4.3-management-alpine"
     container_name: rabbitmq
@@ -38,3 +40,62 @@ services:
       interval: 10s
       timeout: 30s
       retries: 3
+    hostname: rabbitmq
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  postgres:
+    image: postgres:18-bookworm
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - ${PROJECT_ROOT}/out/pgdata:/var/lib/postgresql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"'
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  port-forwarder:
+    image: alpine/socat:1.8.1.3
+    container_name: env-port-forwarder
+    entrypoint: |
+      /bin/sh -c "
+        socat -d -d tcp-listen:5432,fork,reuseaddr tcp-connect:postgres:5432 &
+        wait
+      "
+    ports:
+      - "127.0.0.1:5432:5432"
+    profiles: [ "db-access" ]
+
+  postgres-migrate:
+    image: migrate/migrate:v4.20.1
+    volumes:
+      - ${PROJECT_ROOT}/migrations:/migrations
+    profiles: [ "tools" ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  swagger:
+    profiles: [ "tools" ]
+    build:
+      context: ${PROJECT_ROOT}
+      dockerfile_inline: |
+        FROM golang:1.25.13-alpine
+        RUN go install github.com/swaggo/swag/v2/cmd/swag@v2.0.0-rc5
+        WORKDIR /code
+        ENTRYPOINT ["swag"]
+    environment:
+      GOCACHE: /tmp/go-build
+      GOMODCACHE: /tmp/go-mod
+    volumes:
+      - ${PROJECT_ROOT}:/code
+
+volumes:
+  rabbitmq_data:

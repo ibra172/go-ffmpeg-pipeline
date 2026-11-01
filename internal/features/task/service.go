@@ -6,12 +6,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/ibra172/go-ffmpeg-pipeline/internal/apperr"
 )
 
 type TaskService interface {
-	CreateTask(ctx context.Context, payload Payload) (*Task, error)
+	CreateTask(ctx context.Context, userID uuid.UUID, payload Payload) (*Task, error)
 	GetTaskByID(ctx context.Context, id uuid.UUID) (Task, error)
-	UpdateStatus(ctx context.Context, id uuid.UUID, status Status) error
+	GetTaskForUser(ctx context.Context, taskID uuid.UUID, userID uuid.UUID) (Task, error)
 	CompleteTask(ctx context.Context, id uuid.UUID, result Result) error
 	FailTask(ctx context.Context, id uuid.UUID, errMsg string) error
 }
@@ -30,13 +31,14 @@ func NewService(taskRepository TaskRepository, sender Sender, dataDir string) *S
 	}
 }
 
-func (s *Service) CreateTask(ctx context.Context, payload Payload) (*Task, error) {
+func (s *Service) CreateTask(ctx context.Context, userID uuid.UUID, payload Payload) (*Task, error) {
 	task := &Task{
 		ID:        uuid.New(),
 		Status:    StatusInProgress,
 		Payload:   payload,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
+		UserID:    userID,
 	}
 
 	if err := s.repository.CreateTask(ctx, task); err != nil {
@@ -68,13 +70,31 @@ func (s *Service) GetTaskByID(ctx context.Context, id uuid.UUID) (Task, error) {
 	return task, nil
 }
 
-func (s *Service) UpdateStatus(ctx context.Context, id uuid.UUID, status Status) error {
-	return s.mutateTask(ctx, id, func(t *Task) {
-		t.Status = status
-	})
+func (s *Service) GetTaskForUser(
+	ctx context.Context,
+	taskID uuid.UUID,
+	userID uuid.UUID,
+) (Task, error) {
+	task, err := s.GetTaskByID(ctx, taskID)
+	if err != nil {
+		return Task{}, fmt.Errorf("get task by id: %w", err)
+	}
+	if task.UserID != userID {
+		return Task{}, fmt.Errorf(
+			"task '%s' does not belong to user '%s': %w",
+			taskID,
+			userID,
+			apperr.ErrNotFound,
+		)
+	}
+
+	return task, nil
 }
 
 func (s *Service) CompleteTask(ctx context.Context, id uuid.UUID, result Result) error {
+	if result.OutputPath == "" {
+		return fmt.Errorf("output path is required: %w", apperr.ErrInvalidArgument)
+	}
 	return s.mutateTask(ctx, id, func(t *Task) {
 		t.Status = StatusReady
 		t.Result = &result

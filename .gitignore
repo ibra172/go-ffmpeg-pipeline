@@ -2,3 +2,6 @@ tests
 .pytest_cache
 .vscode
 .env
+/out
+/data/
+/bin/

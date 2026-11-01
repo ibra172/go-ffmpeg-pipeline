@@ -53,16 +53,3 @@ func (r *UserRamRepository) GetUserByUsername(ctx context.Context, username stri
 
 	return User{}, fmt.Errorf("user with usernmame=`%s`: %w", username, apperr.ErrNotFound)
 }
-
-func (r *UserRamRepository) UpdateUser(ctx context.Context, user *User) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if _, exists := r.data[user.ID]; !exists {
-		return fmt.Errorf("user with ID=`%v`: %w", user.ID, apperr.ErrNotFound)
-	}
-
-	r.data[user.ID] = user
-
-	return nil
-}

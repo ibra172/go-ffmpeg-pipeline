@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/apperr"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/ctxlog"
+	"github.com/ibra172/go-ffmpeg-pipeline/internal/features/auth"
 	"github.com/ibra172/go-ffmpeg-pipeline/internal/httpresp"
 )
 
@@ -69,18 +70,28 @@ const (
 // @Summary Create processing task
 // @Description Creates a new media-processing job. The task is queued immediately and can be checked by its UUID through the status and result endpoints.
 // @Tags task
-// @Accept json
+// @Accept multipart/form-data
 // @Produce json
-// @Param request body CreateTaskRequest true "Task creation payload" example({"operation":"transcode","target_format":"mp4","resolution":"720p"})
+// @Param video formData file true "Video file"
+// @Param operation formData string true "Processing operation" Enums(transcode,thumbnail,watermark)
+// @Param target_format formData string false "Required for transcode" Enums(mp4,mov,mkv,webm)
+// @Param resolution formData string false "Optional transcode resolution" Enums(360p,480p,720p,1080p,4k)
 // @Security BearerAuth
 // @Success 201 {object} CreateTaskResponse "Task created successfully"
-// @Failure 400 {object} httpresp.ErrorResponse "Invalid request body"
+// @Failure 400 {object} httpresp.ErrorResponse "Invalid multipart form or task parameters"
+// @Failure 401 {object} httpresp.ErrorResponse "Authentication required"
 // @Failure 405 {object} httpresp.ErrorResponse "Invalid method"
 // @Failure 500 {object} httpresp.ErrorResponse "Internal server error"
 // @Router /task [post]
 func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := ctxlog.FromContext(ctx)
+
+	user, ok := auth.UserFromContext(ctx)
+	if !ok {
+		httpresp.RespondError(ctx, w, apperr.ErrUnauthorized, "authentication required")
+		return
+	}
 
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", "POST")
@@ -178,7 +189,7 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		InputPath:    dstPath,
 	}
 
-	createdTask, err := h.service.CreateTask(ctx, payload)
+	createdTask, err := h.service.CreateTask(ctx, user.ID, payload)
 	if err != nil {
 		httpresp.RespondError(ctx, w, err, "failed to create task")
 		return
@@ -199,12 +210,19 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} TaskStatusResponse "Current task status"
 // @Success 202 {object} TaskStatusResponse "Task is still processing"
 // @Failure 400 {object} httpresp.ErrorResponse "Invalid UUID format"
-// @Failure 404 {object} httpresp.ErrorResponse "Task not found"
+// @Failure 401 {object} httpresp.ErrorResponse "Authentication required"
+// @Failure 404 {object} httpresp.ErrorResponse "Task not found or belongs to another user"
 // @Failure 500 {object} httpresp.ErrorResponse "Internal server error"
 // @Router /status/{id} [get]
 func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	id, err := uuid.Parse(r.PathValue("id"))
+	user, ok := auth.UserFromContext(ctx)
+	if !ok {
+		httpresp.RespondError(ctx, w, apperr.ErrUnauthorized, "authentication required")
+		return
+	}
+
+	taskID, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		httpresp.RespondError(
 			ctx,
@@ -215,7 +233,7 @@ func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := h.service.GetTaskByID(r.Context(), id)
+	task, err := h.service.GetTaskForUser(ctx, taskID, user.ID)
 	if err != nil {
 		httpresp.RespondError(ctx, w, err, "failed to get task")
 		return
@@ -234,7 +252,7 @@ func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 
 // GetResult returns the result payload for a completed task.
 // @Summary Get task result
-// @Description Returns the processing result for a task when it is finished. For failed tasks, the API returns the error message instead of the output artifact.
+// @Description Returns the processing result as output path for a task when it is finished. For failed tasks, the API returns the error message instead of the output artifact.
 // @Tags task
 // @Produce json
 // @Param id path string true "Task ID in UUID format" example(123e4567-e89b-12d3-a456-426614174000)
@@ -242,12 +260,18 @@ func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} TaskResultResponse "Task finished (see status field for success/error)"
 // @Success 202 {object} TaskStatusResponse "Task is still being processed"
 // @Failure 400 {object} httpresp.ErrorResponse "Invalid UUID format"
-// @Failure 404 {object} httpresp.ErrorResponse "Task not found"
+// @Failure 401 {object} httpresp.ErrorResponse "Authentication required"
+// @Failure 404 {object} httpresp.ErrorResponse "Task not found or belongs to another user"
 // @Failure 500 {object} httpresp.ErrorResponse "Internal server error"
 // @Router /result/{id} [get]
 func (h *Handler) GetResult(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	id, err := uuid.Parse(r.PathValue("id"))
+	user, ok := auth.UserFromContext(ctx)
+	if !ok {
+		httpresp.RespondError(ctx, w, apperr.ErrUnauthorized, "authentication required")
+		return
+	}
+	taskID, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		httpresp.RespondError(
 			ctx,
@@ -258,7 +282,7 @@ func (h *Handler) GetResult(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := h.service.GetTaskByID(r.Context(), id)
+	task, err := h.service.GetTaskForUser(ctx, taskID, user.ID)
 	if err != nil {
 		httpresp.RespondError(ctx, w, err, "failed to get task")
 		return

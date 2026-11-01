@@ -36,7 +36,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_features_auth.LoginRequest"
+                            "$ref": "#/definitions/auth.LoginRequest"
                         }
                     }
                 ],
@@ -44,25 +44,25 @@ const docTemplate = `{
                     "200": {
                         "description": "User logged in successfully",
                         "schema": {
-                            "$ref": "#/definitions/internal_features_auth.LoginResponse"
+                            "$ref": "#/definitions/auth.LoginResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid request body",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
+                            "$ref": "#/definitions/httpresp.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Invalid username or password",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
+                            "$ref": "#/definitions/httpresp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
+                            "$ref": "#/definitions/httpresp.ErrorResponse"
                         }
                     }
                 }
@@ -70,7 +70,7 @@ const docTemplate = `{
         },
         "/register": {
             "post": {
-                "description": "Creates a new user account and returns the created user ID.",
+                "description": "Creates a user account. Username: 3–30 ASCII letters, digits or underscores, starting with a letter; uniqueness is case-insensitive. Password: 8–72 bytes.",
                 "consumes": [
                     "application/json"
                 ],
@@ -88,7 +88,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_features_auth.RegisterRequest"
+                            "$ref": "#/definitions/auth.RegisterRequest"
                         }
                     }
                 ],
@@ -96,25 +96,25 @@ const docTemplate = `{
                     "201": {
                         "description": "User registered successfully",
                         "schema": {
-                            "$ref": "#/definitions/internal_features_auth.RegisterResponse"
+                            "$ref": "#/definitions/auth.RegisterResponse"
                         }
                     },
                     "400": {
-                        "description": "Invalid request body",
+                        "description": "Invalid JSON or registration parameters",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
+                            "$ref": "#/definitions/httpresp.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Username already exists",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
+                            "$ref": "#/definitions/httpresp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
+                            "$ref": "#/definitions/httpresp.ErrorResponse"
                         }
                     }
                 }
@@ -127,7 +127,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns the processing result for a task when it is finished. For failed tasks, the API returns the error message instead of the output artifact.",
+                "description": "Returns the processing result as output path for a task when it is finished. For failed tasks, the API returns the error message instead of the output artifact.",
                 "produces": [
                     "application/json"
                 ],
@@ -149,31 +149,37 @@ const docTemplate = `{
                     "200": {
                         "description": "Task finished (see status field for success/error)",
                         "schema": {
-                            "$ref": "#/definitions/internal_features_task.TaskResultResponse"
+                            "$ref": "#/definitions/task.TaskResultResponse"
                         }
                     },
                     "202": {
                         "description": "Task is still being processed",
                         "schema": {
-                            "$ref": "#/definitions/internal_features_task.TaskStatusResponse"
+                            "$ref": "#/definitions/task.TaskStatusResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid UUID format",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
+                            "$ref": "#/definitions/httpresp.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/httpresp.ErrorResponse"
                         }
                     },
                     "404": {
-                        "description": "Task not found",
+                        "description": "Task not found or belongs to another user",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
+                            "$ref": "#/definitions/httpresp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
+                            "$ref": "#/definitions/httpresp.ErrorResponse"
                         }
                     }
                 }
@@ -208,31 +214,37 @@ const docTemplate = `{
                     "200": {
                         "description": "Current task status",
                         "schema": {
-                            "$ref": "#/definitions/internal_features_task.TaskStatusResponse"
+                            "$ref": "#/definitions/task.TaskStatusResponse"
                         }
                     },
                     "202": {
                         "description": "Task is still processing",
                         "schema": {
-                            "$ref": "#/definitions/internal_features_task.TaskStatusResponse"
+                            "$ref": "#/definitions/task.TaskStatusResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid UUID format",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
+                            "$ref": "#/definitions/httpresp.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/httpresp.ErrorResponse"
                         }
                     },
                     "404": {
-                        "description": "Task not found",
+                        "description": "Task not found or belongs to another user",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
+                            "$ref": "#/definitions/httpresp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
+                            "$ref": "#/definitions/httpresp.ErrorResponse"
                         }
                     }
                 }
@@ -247,7 +259,7 @@ const docTemplate = `{
                 ],
                 "description": "Creates a new media-processing job. The task is queued immediately and can be checked by its UUID through the status and result endpoints.",
                 "consumes": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "produces": [
                     "application/json"
@@ -258,32 +270,79 @@ const docTemplate = `{
                 "summary": "Create processing task",
                 "parameters": [
                     {
-                        "description": "Task creation payload",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/internal_features_task.CreateTaskRequest"
-                        }
+                        "type": "file",
+                        "description": "Video file",
+                        "name": "video",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "transcode",
+                            "thumbnail",
+                            "watermark"
+                        ],
+                        "type": "string",
+                        "description": "Processing operation",
+                        "name": "operation",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "mp4",
+                            "mov",
+                            "mkv",
+                            "webm"
+                        ],
+                        "type": "string",
+                        "description": "Required for transcode",
+                        "name": "target_format",
+                        "in": "formData"
+                    },
+                    {
+                        "enum": [
+                            "360p",
+                            "480p",
+                            "720p",
+                            "1080p",
+                            "4k"
+                        ],
+                        "type": "string",
+                        "description": "Optional transcode resolution",
+                        "name": "resolution",
+                        "in": "formData"
                     }
                 ],
                 "responses": {
                     "201": {
                         "description": "Task created successfully",
                         "schema": {
-                            "$ref": "#/definitions/internal_features_task.CreateTaskResponse"
+                            "$ref": "#/definitions/task.CreateTaskResponse"
                         }
                     },
                     "400": {
-                        "description": "Invalid request body",
+                        "description": "Invalid multipart form or task parameters",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
+                            "$ref": "#/definitions/httpresp.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/httpresp.ErrorResponse"
+                        }
+                    },
+                    "405": {
+                        "description": "Invalid method",
+                        "schema": {
+                            "$ref": "#/definitions/httpresp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse"
+                            "$ref": "#/definitions/httpresp.ErrorResponse"
                         }
                     }
                 }
@@ -291,27 +350,20 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "github_com_ibra172_go-ffmpeg-pipeline_internal_httpresp.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "error": {
-                    "description": "Error holds a public error message.",
-                    "type": "string"
-                }
-            }
-        },
-        "internal_features_auth.LoginRequest": {
+        "auth.LoginRequest": {
             "type": "object",
             "properties": {
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "password123"
                 },
                 "username": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "alice"
                 }
             }
         },
-        "internal_features_auth.LoginResponse": {
+        "auth.LoginResponse": {
             "type": "object",
             "properties": {
                 "expires_at": {
@@ -322,18 +374,20 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_features_auth.RegisterRequest": {
+        "auth.RegisterRequest": {
             "type": "object",
             "properties": {
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "password123"
                 },
                 "username": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "alice"
                 }
             }
         },
-        "internal_features_auth.RegisterResponse": {
+        "auth.RegisterResponse": {
             "type": "object",
             "properties": {
                 "user_id": {
@@ -344,24 +398,16 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_features_task.CreateTaskRequest": {
+        "httpresp.ErrorResponse": {
             "type": "object",
             "properties": {
-                "operation": {
-                    "description": "Operation defines the type of job to run. Examples: transcode, thumbnail, watermark.",
-                    "type": "string"
-                },
-                "resolution": {
-                    "description": "Resolution is used by transcode tasks and matches dimension presets such as 720p.",
-                    "type": "string"
-                },
-                "target_format": {
-                    "description": "TargetFormat is used by transcode tasks and may be set to mp4, mov, etc.",
+                "error": {
+                    "description": "Error holds a public error message.",
                     "type": "string"
                 }
             }
         },
-        "internal_features_task.CreateTaskResponse": {
+        "task.CreateTaskResponse": {
             "type": "object",
             "properties": {
                 "task_id": {
@@ -370,7 +416,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_features_task.TaskResultResponse": {
+        "task.TaskResultResponse": {
             "type": "object",
             "properties": {
                 "error": {
@@ -384,7 +430,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_features_task.TaskStatusResponse": {
+        "task.TaskStatusResponse": {
             "type": "object",
             "properties": {
                 "status": {
@@ -410,7 +456,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "Media Pipeline App API",
-	Description:      "API Server for a Multimedia Processor Application using FFmpeg",
+	Description:      "Asynchronous video processing API using FFmpeg. Register and log in, then enter Bearer <token> in Authorize to access protected endpoints.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",
