@@ -24,8 +24,8 @@ func NewHandler(service Service) *Handler {
 // RegisterRequest contains the payload for creating a new user.
 // swagger:model RegisterRequest
 type RegisterRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username string `json:"username" example:"alice"`
+	Password string `json:"password" example:"password123"`
 }
 
 // RegisterResponse is returned after a successful registration.
@@ -38,8 +38,8 @@ type RegisterResponse struct {
 // LoginRequest contains the credentials for authentication.
 // swagger:model LoginRequest
 type LoginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username string `json:"username" example:"alice"`
+	Password string `json:"password" example:"password123"`
 }
 
 // LoginResponse is returned after a successful login.
@@ -51,13 +51,13 @@ type LoginResponse struct {
 
 // Register creates a new user account.
 // @Summary Register new user
-// @Description Creates a new user account and returns the created user ID.
+// @Description Creates a user account. Username: 3–30 ASCII letters, digits or underscores, starting with a letter; uniqueness is case-insensitive. Password: 8–72 bytes.
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param request body RegisterRequest true "User registration payload" example({"username":"alice","password":"secret"})
+// @Param request body RegisterRequest true "User registration payload"
 // @Success 201 {object} RegisterResponse "User registered successfully"
-// @Failure 400 {object} httpresp.ErrorResponse "Invalid request body"
+// @Failure 400 {object} httpresp.ErrorResponse "Invalid JSON or registration parameters"
 // @Failure 409 {object} httpresp.ErrorResponse "Username already exists"
 // @Failure 500 {object} httpresp.ErrorResponse "Internal server error"
 // @Router /register [post]
@@ -102,7 +102,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param request body LoginRequest true "User login payload" example({"username":"alice","password":"secret"})
+// @Param request body LoginRequest true "User login payload"
 // @Success 200 {object} LoginResponse "User logged in successfully"
 // @Failure 400 {object} httpresp.ErrorResponse "Invalid request body"
 // @Failure 401 {object} httpresp.ErrorResponse "Invalid username or password"

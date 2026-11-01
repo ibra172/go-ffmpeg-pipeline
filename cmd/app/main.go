@@ -28,7 +28,7 @@ import (
 
 // @title        Media Pipeline App API
 // @version      1.0
-// @description  API Server for a Multimedia Processor Application using FFmpeg
+// @description Asynchronous video processing API using FFmpeg. Register and log in, then enter Bearer <token> in Authorize to access protected endpoints.
 
 // @host         127.0.0.1:8000
 // @BasePath     /

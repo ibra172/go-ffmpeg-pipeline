@@ -11,9 +11,8 @@ BIN_DIR := $(PROJECT_ROOT)/bin
 .PHONY: help build proto fmt lint test run-app run-worker \
         service-deploy service-undeploy service-logs \
 		env-up env-down env-cleanup env-port-forward env-port-close \
-		broker-up broker-down \
+		swagger-gen broker-up broker-down \
 		migrate-create migrate-up migrate-down migrate-action \
-        test-env-up hw1-test hw2-test
 
 ## ---- local run ------------------------------------------------------------
 
@@ -26,19 +25,29 @@ run-app run-worker: export GRPC_TARGET := localhost:9090
 run-app run-worker: export WATERMARK_PATH := $(PROJECT_ROOT)/resources/watermark.png
 run-app: export POSTGRES_HOST := localhost
 
-run-app: ## Запустить API локально (RabbitMQ должен быть запущен)
+.PHONY: local-env-up local-env-down
+
+local-env-up: ## Подготовить окружение для локального запуска
+	$(MAKE) broker-up
+	$(MAKE) env-up
+	$(MAKE) migrate-up
+	$(MAKE) env-port-forward
+
+local-env-down: ## Остановить окружение локального запуска
+	$(MAKE) env-port-close
+	$(MAKE) broker-down
+	$(MAKE) env-down
+
+run-app: local-env-up ## Запустить API локально (PostgreSQL с применёнными миграциями и RabbitMQ должны быть запущены)
 	$(GO_BIN) run ./cmd/app
 
 run-worker: ## Запустить worker локально (RabbitMQ и API должны быть запущены)
 	$(GO_BIN) run ./cmd/worker
 
 ## ---- build / codegen -------------------------------------------------------
-
-build: GO_BIN ?= go
-
 build: ## Собрать бинарники app и worker в bin/
-	go build -o $(BIN_DIR)/app ./cmd/app
-	go build -o $(BIN_DIR)/worker ./cmd/worker
+	$(GO_BIN) build -o $(BIN_DIR)/app ./cmd/app
+	$(GO_BIN) build -o $(BIN_DIR)/worker ./cmd/worker
 
 # requires: protoc, protoc-gen-go, protoc-gen-go-grpc
 # install:  go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
@@ -55,11 +64,11 @@ fmt: ## Отформатировать Go-файлы проекта
 	gofmt -w .
 
 lint: ## Прогнать go vet и проверку форматирования
-	go vet ./...
+	$(GO_BIN) vet ./...
 	@test -z "$$(gofmt -l .)" || (echo "unformatted files:"; gofmt -l .; exit 1)
 
 test: ## Прогнать Go-тесты
-	go test ./... -v
+	$(GO_BIN) test ./... -v
 
 ## ---- docker ------------------------------------------------------------
 
@@ -69,17 +78,17 @@ CONTAINER_NAME := media-pipeline
 service-deploy: ## Собрать образы и поднять все сервисы (app, worker, rabbitmq)
 	docker compose up -d --build
 
-service-undeploy: ## Остановить все сервисы
-	docker compose down
+service-undeploy: ## Остановить и удалить контейнеры проекта
+	docker compose --profile db-access down
 
 service-logs: ## Смотреть логи всех сервисов в реальном времени
 	docker compose logs -f
 
-env-up: ## Запустить окружение проекта
+env-up: ## Запустить окружение проекта (PostgreSQL)
 	@docker compose up -d postgres
 
-env-down: ## Остановить окружение проекта
-	@docker compose down postgres
+env-down: ## Остановить PostgreSQL
+	@docker compose stop postgres
 
 env-cleanup: ## env: Очистить окружение проекта
 	@read -p "Очистить все volume файлы окружения? Опасность утери данных. [y/N]: " ans; \
@@ -94,14 +103,22 @@ env-cleanup: ## env: Очистить окружение проекта
 env-port-forward: ## Открыть порты сервисов окружения
 	@docker compose up -d port-forwarder
 
-env-port-close: ## Закрыть порты сервисов окружения
-	@docker compose down port-forwarder
+env-port-close: ## Остановить доступ к PostgreSQL с хоста
+	@docker compose stop port-forwarder
+
+swagger-gen: ## Сгенерировать Swagger-документацию через Docker
+	@docker compose run --rm --build \
+		--user "$(shell id -u):$(shell id -g)" \
+		swagger init \
+		-g cmd/app/main.go \
+		-o docs \
+		--parseInternal
 
 broker-up: ## Запустить очередь сообщений RabbitMQ
 	@docker compose up -d queue
 
-broker-down: ## Остановить брокер сообщений
-	@docker compose down queue
+broker-down: ## Остановить RabbitMQ
+	@docker compose stop queue
 
 migrate-create: ## Создать новую версию схемы данных
 	@if [ -z "$(seq)" ]; then \
@@ -129,23 +146,6 @@ migrate-action:
 		-path /migrations \
 		-database "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable" \
 		"$(action)"
-
-## ---- python tests ----------------------------
-
-VENV := $(PROJECT_ROOT)/tests/venv
-PYTHON := $(VENV)/bin/python3
-PIP := $(VENV)/bin/pip
-PYTEST := $(VENV)/bin/pytest
-
-test-env-up: ## Создать python venv для тестов
-	python3 -m venv $(VENV)
-	$(PIP) install pytest requests
-
-hw1-test: ## Прогнать тесты tests1.py
-	$(PYTEST) $(PROJECT_ROOT)/tests/tests1.py -k "task" -v
-
-hw2-test: ## Прогнать тесты tests2.py
-	$(PYTEST) $(PROJECT_ROOT)/tests/tests2.py -v
 
 ## ---- help --------------------------------------------------------------
 
