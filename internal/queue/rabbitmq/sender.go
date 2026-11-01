@@ -32,11 +32,26 @@ func (s *Sender) Send(ctx context.Context, msg task.Message) error {
 		return fmt.Errorf("marshal a task message: %w", err)
 	}
 
-	err = s.client.channel.PublishWithContext(
-		ctx,
+	ch, err := s.client.connection.Channel()
+	if err != nil {
+		return fmt.Errorf("open AMQP channel: %w", err)
+	}
+	defer ch.Close()
+
+	if err = ch.Confirm(false); err != nil {
+		return fmt.Errorf("put channel into confirm mode: %w", err)
+	}
+
+	returns := ch.NotifyReturn(make(chan amqp.Return, 1))
+
+	publishCtx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
+
+	confirmation, err := ch.PublishWithDeferredConfirmWithContext(
+		publishCtx,
 		"",
 		s.queueName,
-		false,
+		true,
 		false,
 		amqp.Publishing{
 			ContentType:  "application/json",
@@ -48,5 +63,25 @@ func (s *Sender) Send(ctx context.Context, msg task.Message) error {
 		return fmt.Errorf("publish a task message: %w", err)
 	}
 
-	return nil
+	acked, err := confirmation.WaitContext(publishCtx)
+	if err != nil {
+		return fmt.Errorf("wait confirmation: %w", err)
+	}
+	if !acked {
+		return fmt.Errorf("broker did not confirm")
+	}
+
+	select {
+	case returned, ok := <-returns:
+		if !ok {
+			return fmt.Errorf("publisher returns channel closed")
+		}
+		return fmt.Errorf(
+			"Publication returned: %d %s",
+			returned.ReplyCode,
+			returned.ReplyText,
+		)
+	default:
+		return nil
+	}
 }
